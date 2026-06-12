@@ -202,7 +202,7 @@ class FreedesktopNotifyMonitor(_DBusMonitorSource):
 
     def _close(self, notif_id, summary="", body=""):
         """Best-effort clearing: close the desktop notification, and -- if the
-        optional cod-tray-purge GNOME extension is installed -- also remove the
+        optional gameify-tray-purge GNOME extension is installed -- also remove the
         lingering entry from GNOME's notification list/tray."""
         if self._side is None:
             return

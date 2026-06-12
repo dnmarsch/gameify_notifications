@@ -4,7 +4,7 @@ banner.
 
 There is no freedesktop standard for purging the persistent list, so this is a
 per-desktop **strategy** (like sources/ and backends/): GNOME uses our
-`cod-tray-purge` shell extension; other desktops (KDE, dunst, ...) can implement
+`gameify-tray-purge` shell extension; other desktops (KDE, dunst, ...) can implement
 their own `TrayCleaner` and register it in `select_tray_cleaner()`. The default
 is a harmless no-op. The cleaner is injected into the D-Bus source, so it's
 swappable and unit-testable.
@@ -30,11 +30,11 @@ class NoopTrayCleaner(TrayCleaner):
 
 
 class GnomeExtensionTrayCleaner(TrayCleaner):
-    """Calls `org.cod.TrayPurge.DismissMatching` exposed by the cod-tray-purge
+    """Calls `org.gameify.TrayPurge.DismissMatching` exposed by the gameify-tray-purge
     GNOME Shell extension. Silently no-ops if the extension isn't installed."""
 
-    SERVICE = "org.cod.TrayPurge"
-    OBJECT = "/org/cod/TrayPurge"
+    SERVICE = "org.gameify.TrayPurge"
+    OBJECT = "/org/gameify/TrayPurge"
 
     def __init__(self):
         self._conn = None

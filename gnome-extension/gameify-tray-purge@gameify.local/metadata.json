@@ -1,0 +1,7 @@
+{
+  "uuid": "gameify-tray-purge@gameify.local",
+  "name": "Gameify Notifications — Tray Purge",
+  "description": "Exposes a session D-Bus service (org.gameify.TrayPurge) so gameify_notifications_overlay can remove matching notifications from the GNOME message-tray list when you dismiss them in the overlay. Methods: DismissMatching(summary, body) -> int removed; ClearAll() -> int removed. Does nothing on its own.",
+  "shell-version": ["45", "46", "47"],
+  "version": 1
+}

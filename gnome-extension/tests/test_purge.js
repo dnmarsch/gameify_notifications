@@ -4,7 +4,7 @@
 
 import System from 'system';
 import {matchesNotification, selectMatching}
-    from '../cod-tray-purge@cod.local/purge.js';
+    from '../gameify-tray-purge@gameify.local/purge.js';
 
 let failures = 0;
 function check(cond, msg) {

@@ -1,4 +1,4 @@
-// Pure notification-matching logic for cod-tray-purge.
+// Pure notification-matching logic for gameify-tray-purge.
 //
 // No Shell/Gio dependencies, so it can be unit-tested with plain `gjs`
 // (see ../../gnome-extension tests, run via tests/test_gnome_extension.py).

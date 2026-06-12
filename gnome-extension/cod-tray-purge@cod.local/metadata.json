@@ -1,7 +1,0 @@
-{
-  "uuid": "cod-tray-purge@cod.local",
-  "name": "CoD Overlay — Tray Purge",
-  "description": "Exposes a session D-Bus service (org.cod.TrayPurge) so cod-teams-overlay can remove matching notifications from the GNOME message-tray list when you dismiss them in the overlay. Methods: DismissMatching(summary, body) -> int removed; ClearAll() -> int removed. Does nothing on its own.",
-  "shell-version": ["45", "46", "47"],
-  "version": 1
-}

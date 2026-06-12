@@ -1,4 +1,4 @@
-// CoD Overlay — Tray Purge (GNOME Shell 45/46/47, ESM)
+// Gameify Notifications — Tray Purge (GNOME Shell 45/46/47, ESM)
 //
 // Runs inside gnome-shell and exposes a tiny session D-Bus service so the
 // overlay can purge notifications from the *notification list* (the calendar
@@ -16,7 +16,7 @@ import {matchesNotification} from './purge.js';
 
 const IFACE = `
 <node>
-  <interface name="org.cod.TrayPurge">
+  <interface name="org.gameify.TrayPurge">
     <method name="DismissMatching">
       <arg type="s" direction="in" name="summary"/>
       <arg type="s" direction="in" name="body"/>
@@ -28,12 +28,12 @@ const IFACE = `
   </interface>
 </node>`;
 
-export default class CodTrayPurgeExtension {
+export default class GameifyTrayPurgeExtension {
     enable() {
         this._impl = Gio.DBusExportedObject.wrapJSObject(IFACE, this);
-        this._impl.export(Gio.DBus.session, '/org/cod/TrayPurge');
+        this._impl.export(Gio.DBus.session, '/org/gameify/TrayPurge');
         this._ownerId = Gio.bus_own_name(
-            Gio.BusType.SESSION, 'org.cod.TrayPurge',
+            Gio.BusType.SESSION, 'org.gameify.TrayPurge',
             Gio.BusNameOwnerFlags.NONE, null, null, null);
     }
 

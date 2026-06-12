@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Install the CoD Overlay tray-purge GNOME extension for the current user.
+# Install the Gameify Notifications tray-purge GNOME extension for the current user.
 set -euo pipefail
-UUID="cod-tray-purge@cod.local"
+UUID="gameify-tray-purge@gameify.local"
 SRC="$(cd "$(dirname "$0")" && pwd)/$UUID"
 DEST="$HOME/.local/share/gnome-shell/extensions/$UUID"
 mkdir -p "$(dirname "$DEST")"

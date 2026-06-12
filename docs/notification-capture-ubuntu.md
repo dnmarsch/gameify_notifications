@@ -133,8 +133,8 @@ gnome-shell:
   id from an external D-Bus call; the
   [GJS notifications API](https://gjs.guide/extensions/topics/notifications.html)
   works on `Main.messageTray` inside the shell. So this repo **ships a small
-  custom extension** at `gnome-extension/cod-tray-purge@cod.local/` that exports
-  `org.cod.TrayPurge.DismissMatching(summary, body)` / `ClearAll()` and destroys
+  custom extension** at `gnome-extension/gameify-tray-purge@gameify.local/` that exports
+  `org.gameify.TrayPurge.DismissMatching(summary, body)` / `ClearAll()` and destroys
   matching `Main.messageTray` notifications. Install it (see
   `gnome-extension/README.md`); the overlay then calls it automatically on
   dismiss/clear (best-effort — matching by title+body, since the freedesktop id
