@@ -16,6 +16,7 @@ REF_W, REF_H = 1920.0, 1080.0
 
 class WidgetWindow(QWidget):
     recentered = Signal()
+    geometryChanged = Signal()        # emitted on move/resize so a docked panel can follow
 
     def __init__(self, app, monitors_provider=None):
         super().__init__()
@@ -78,10 +79,12 @@ class WidgetWindow(QWidget):
     def resizeEvent(self, ev):
         self._reposition_controls()
         self.persist.schedule_save()
+        self.geometryChanged.emit()
         super().resizeEvent(ev)
 
     def moveEvent(self, ev):
         self.persist.schedule_save()
+        self.geometryChanged.emit()
         super().moveEvent(ev)
 
     def mousePressEvent(self, ev):

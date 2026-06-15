@@ -266,9 +266,17 @@ HUDs: drop a `*.py` defining a `Hud` subclass into
 ### The dismiss panel
 
 Lists every captured notification with a per-item **✕** and **Clear all**, and
-shows total **DAMAGE %** for the active overlay. Movable (drag the header),
-resizable (size grip), and collapsible to a one-line toolbar (▾/▸). Dismissing an
-item heals the damage and clears the underlying system notification.
+shows total **DAMAGE %** for the active overlay. Resizable (size grip),
+collapsible to a one-line toolbar (▾/▸), and dismissing an item heals the damage
+and clears the underlying system notification.
+
+By default (`dock_panel = true`) the panel is **docked beneath widget HUDs**
+(halo/mario/pokemon/goldeneye) as one unit: its width follows the HUD (the HUD's
+size grip drives both; a ~320px readable minimum, left-aligned under narrower
+HUDs like GoldenEye), it keeps its own height (drag the grip down to grow the
+list), and dragging either window moves the pair. Set `dock_panel = false` (then
+restart) for a separate floating panel. The `cod` overlay spans all monitors and
+always uses a free-floating panel.
 
 ---
 

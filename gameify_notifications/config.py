@@ -83,6 +83,9 @@ DEFAULT_RULES = """\
 full_at   = 10.0    # total weight at which the HUD is maxed (full red / empty shield);
                     # i.e. the unread-message budget. Raise it to make damage build slower.
 max_alpha = 0.7     # opacity ceiling so the screen never goes fully opaque
+dock_panel = true   # dock the dismiss panel under widget HUDs (halo/mario/pokemon/
+                    # goldeneye): width follows the HUD, one move handle. false = a
+                    # separate floating panel. (cod always uses a free panel.) Restart to apply.
 
 # --- Per-HUD tuning (hot-reloaded; edits apply live while the HUD is shown) ---
 # EVERY [hud.*] block also accepts these optional universal knobs (omit them to

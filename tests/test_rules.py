@@ -34,6 +34,14 @@ def test_defaults_loaded(rules):
     assert 0 < rules.max_alpha <= 1.0
 
 
+def test_dock_panel_default_and_parsing():
+    assert RuleSet().dock_panel is True             # shipped default
+    _write_rules('dock_panel = false\n[[rule]]\nname="x"\napp="t"\nweight=1.0\n')
+    assert RuleSet().dock_panel is False
+    _write_rules('dock_panel = "yes please"\n[[rule]]\nname="x"\napp="t"\nweight=1.0\n')
+    assert RuleSet().dock_panel is True             # non-bool -> default True
+
+
 def test_default_hud_params_loaded(rules):
     # the shipped rules.toml documents [hud.halo] / [hud.cod] tuning tables
     assert rules.params_for("halo")["shield_fraction"] == 0.5

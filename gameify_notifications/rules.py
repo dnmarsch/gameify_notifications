@@ -52,6 +52,7 @@ class RuleSet:
         self.rules = []
         self.full_at = 6.0
         self.max_alpha = 0.7
+        self.dock_panel = True        # dock the dismiss panel under widget HUDs
         self.hud_params = {}          # {hud_name: {knob: value}} from [hud.<name>]
         self._mtime = None
         self.reload(force=True)
@@ -83,6 +84,8 @@ class RuleSet:
 
         self.full_at = _as_float(data.get("full_at"), 6.0, "full_at") or 6.0
         self.max_alpha = _as_float(data.get("max_alpha"), 0.7, "max_alpha")
+        dp = data.get("dock_panel", True)        # only a real bool counts; else default
+        self.dock_panel = dp if isinstance(dp, bool) else True
 
         hud = data.get("hud", {})
         self.hud_params = {k: v for k, v in hud.items()

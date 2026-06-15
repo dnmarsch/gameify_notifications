@@ -41,6 +41,7 @@ class PanelWindow(QWidget):
         super().__init__()
         self.app = app
         self._drag = None
+        self._dock = None          # PanelDock when docked under a widget HUD, else None
         self._collapsed = False
         self.setObjectName("panel")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
@@ -196,9 +197,18 @@ class PanelWindow(QWidget):
             config.save_state("panel_collapsed", collapsed)
         self.collapsedChanged.emit(collapsed)
 
+    # ---- docking ---------------------------------------------------------
+    def set_dock(self, dock):
+        """Attach a PanelDock so this panel follows a widget HUD (or None to
+        float freely). While docked, width is HUD-driven and the header drags
+        the pair via the HUD."""
+        self._dock = dock
+
     # ---- move / resize ---------------------------------------------------
     def resizeEvent(self, ev):
         self.persist.schedule_save()   # grip is layout-anchored now; no manual move
+        if self._dock is not None:
+            self._dock.reassert_width()   # keep width HUD-synced; only height drags stick
         super().resizeEvent(ev)
 
     def moveEvent(self, ev):
@@ -206,11 +216,21 @@ class PanelWindow(QWidget):
         super().moveEvent(ev)
 
     def _hdr_press(self, ev):
-        if ev.button() == Qt.LeftButton:
+        if ev.button() != Qt.LeftButton:
+            return
+        if self._dock is not None:                 # docked: drag moves the HUD (pair follows)
+            self._drag = ev.globalPosition().toPoint()
+            self._drag_hud_origin = self._dock.hud.frameGeometry().topLeft()
+        else:
             self._drag = ev.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
     def _hdr_move(self, ev):
-        if self._drag is not None and (ev.buttons() & Qt.LeftButton):
+        if self._drag is None or not (ev.buttons() & Qt.LeftButton):
+            return
+        if self._dock is not None:
+            delta = ev.globalPosition().toPoint() - self._drag
+            self._dock.move_hud(self._drag_hud_origin + delta)
+        else:
             self.move(ev.globalPosition().toPoint() - self._drag)
 
     def _hdr_release(self, ev):

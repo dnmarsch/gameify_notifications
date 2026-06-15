@@ -28,6 +28,25 @@ def test_build_windows_returns_hud_and_panel(qapp, make_app):
     assert isinstance(panel, PanelWindow)
 
 
+def test_dock_created_for_widget_hud_when_enabled(qapp, make_app):
+    from gameify_notifications.backends.qt.panel_dock import PanelDock
+    app = make_app("halo")                          # widget scope
+    hud_win, panel = backend._build_windows(app)
+    assert app.rules.dock_panel is True             # shipped default
+    assert isinstance(backend._wire_dock(app, hud_win, panel), PanelDock)
+
+
+def test_no_dock_for_cod_or_when_disabled(qapp, make_app):
+    cod_app = make_app("cod")                        # all-monitor overlay -> never docks
+    cod_hud, cod_panel = backend._build_windows(cod_app)
+    assert backend._wire_dock(cod_app, cod_hud, cod_panel) is None
+
+    halo = make_app("halo")
+    halo.rules.dock_panel = False                    # toggled off
+    h_hud, h_panel = backend._build_windows(halo)
+    assert backend._wire_dock(halo, h_hud, h_panel) is None
+
+
 def test_test_injector_only_in_test_mode(qapp, make_app):
     assert backend._make_test_injector(make_app("cod", test_mode=False)) is None
     inj = backend._make_test_injector(make_app("cod", test_mode=True))

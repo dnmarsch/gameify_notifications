@@ -167,9 +167,20 @@ def run_qt(app, source):
 
     for w in windows:
         w.show()
+    dock = _wire_dock(app, hud_win, panel)        # after show: real geometry to dock against
 
     # keep Python objects alive for the app's lifetime
     heartbeat = _install_sigint(qapp)
-    qapp._cod_refs = (windows, timer, bridge, injector, heartbeat, watch)
+    qapp._cod_refs = (windows, timer, bridge, injector, heartbeat, watch, dock)
 
     return qapp.exec()
+
+
+def _wire_dock(app, hud_win, panel):
+    """Dock the panel beneath a widget HUD when `dock_panel` is on; the
+    all-monitor cod overlay has nothing to dock to and keeps a free panel.
+    Returns the PanelDock (kept alive) or None."""
+    if getattr(app.hud, "scope", "all") != "widget" or not app.rules.dock_panel:
+        return None
+    from .panel_dock import PanelDock
+    return PanelDock(hud_win, panel)
