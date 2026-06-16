@@ -108,14 +108,13 @@ health_resolution = 2     # health-bar segments per health unit (higher = finer)
 [hud.cod]
 clear_at_rest    = 0.85   # inner clear radius at 0 damage (1.0 = red only at the edge)
 max_encroachment = 0.18   # inner clear radius at full damage (smaller = red creeps further in)
-intensity        = 0.5    # peripheral-red opacity slope (x damage x max_alpha); gentle at 0.5
+intensity        = 0.6    # peripheral-red opacity at full damage (cod ignores max_alpha)
 
 # Mario (mushroom lives -- one mushroom per unit of max_messages, lost per damage):
 [hud.mario]
 # icon_path   = "/path/to/icon.png"   # default: bundled mushroom (transparent bg)
 lost_opacity = 0.18   # opacity of a lost mushroom (0 = hide it entirely)
 gap          = 0.12   # spacing between mushrooms (fraction of icon width)
-warning_at   = 0.25   # blink the last life/lives once lives drop below this fraction
 
 # Pokemon (sprite + classic HP bar; HP = remaining health, green->yellow->red):
 [hud.pokemon]
@@ -129,6 +128,13 @@ yellow_above = 0.30   # HP at/above this -> yellow, below -> red
 [hud.goldeneye]
 shield_fraction = 0.5   # share of capacity given to the shield (drains first)
 segments        = 9     # ticks per arc
+
+# Stardew Valley (two vertical wood-framed bars: Energy "E" drains first, then
+# Health "H"; each bar fills green->yellow->red by how full it is):
+[hud.stardew]
+shield_fraction = 0.5   # share of capacity given to the Energy bar (drains first)
+green_above     = 0.70  # a bar at/above this fill -> green
+yellow_above    = 0.30  # at/above this -> yellow, below -> red
 
 # --- Microsoft Teams (Chrome: site origin appears in the body) ---
 # Optional `focus_class`: a regex on the active window's WM_CLASS; when it
@@ -243,6 +249,14 @@ def set_config_value(keys, value):
     ["hud", "halo", "shield_fraction"] for a nested table. Intermediate tables
     are created as needed. This is how the Settings GUI edits the same file the
     user can hand-edit -- both flow through rules.toml + the existing reload."""
+    # `hud` is the table namespace for per-HUD tuning ([hud.<name>]). Writing a
+    # scalar to it (the old active-HUD bug) silently overwrites that whole table
+    # and wipes every HUD's saved params -- refuse it. Use ["active_hud"] for the
+    # launch selection, or ["hud", "<name>", "<knob>"] for a HUD's tuning.
+    if keys == ["hud"]:
+        raise ValueError(
+            "refusing to write a scalar to the 'hud' table namespace (would clobber "
+            "all per-HUD tuning); use ['active_hud'] for the launch selection")
     import tomlkit                                   # lazy: only writers need it
     path = rules_file()
     config_dir().mkdir(parents=True, exist_ok=True)
@@ -257,6 +271,44 @@ def set_config_value(keys, value):
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(tomlkit.dumps(doc))
     tmp.replace(path)                                # atomic on POSIX
+
+
+def get_config_value(keys, default=None):
+    """Read rules.toml at the nested `keys` path, returning `default` if the file
+    is absent, unreadable, or the path doesn't exist. The read-side counterpart
+    of set_config_value -- e.g. get_config_value(["active_hud"]) for the
+    last-selected HUD remembered across sessions."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover
+        return default
+    path = rules_file()
+    try:
+        node = tomllib.loads(path.read_text() if path.exists() else DEFAULT_RULES)
+    except Exception:
+        return default
+    for k in keys:
+        if not isinstance(node, dict) or k not in node:
+            return default
+        node = node[k]
+    return node
+
+
+def reset_hud(name):
+    """Remove the [hud.<name>] table from rules.toml so that HUD reverts to its
+    built-in defaults (the Settings 'Reset to defaults' button). Preserves the
+    rest of the file (other HUDs, rules, comments). No-op if absent."""
+    import tomlkit
+    path = rules_file()
+    if not path.exists():
+        return
+    doc = tomlkit.parse(path.read_text())
+    hud = doc.get("hud")
+    if isinstance(hud, dict) and name in hud:
+        del hud[name]
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(tomlkit.dumps(doc))
+        tmp.replace(path)
 
 
 # --------------------------------------------------------------------------

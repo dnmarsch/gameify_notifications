@@ -2,18 +2,17 @@
 capacity. Each unit of damage removes a mushroom (lost from the RIGHT, so the
 remaining lives read from the left); lost ones fade to a dim "ghost" so the row
 keeps a stable width. The boundary mushroom fades fractionally for non-integer
-weights, and the last surviving life blinks when critically low.
+weights.
 
 The icon is the bundled assets/mushroom.png (transparent background) by default;
 point `icon_path` at any PNG to swap it. scope='widget' -- movable, resizable,
 and persisted like the other widget HUDs. All knobs come from the hot-reloaded
 [hud.mario] table in rules.toml via the validated PARAMS spec."""
 
-import math
 import os
 
 from PySide6.QtCore import Qt, QRectF
-from PySide6.QtGui import QColor, QImage, QFont
+from PySide6.QtGui import QImage
 
 from . import Hud, Param, ParamSpec
 from .. import config
@@ -28,17 +27,22 @@ def _icon_exists(path):
 
 class MarioHud(Hud):
     name = "mario"
+    display = "Mario"
     label = "Mario -- mushroom lives"
     scope = "widget"
     size = (600, 96)
 
-    MAGENTA = (255, 46, 140)   # critical / WARNING tint
+    # max_alpha only affects Halo's WARNING border; hide it here (no-op).
+    HIDDEN_SETTINGS = ("max_alpha",)
 
     PARAMS = ParamSpec([
-        Param("icon_path", "", str, validate=_icon_exists),  # "" -> bundled mushroom
-        Param("lost_opacity", 0.18, float, 0.0, 1.0),        # 0 = hide lost lives
-        Param("gap", 0.12, float, 0.0, 1.0),                 # spacing / icon width
-        Param("warning_at", 0.25, float, 0.0, 1.0),          # blink the last lives below this
+        Param("icon_path", "", str, validate=_icon_exists, is_file=True,
+              help="Path to a custom mushroom PNG (transparent background). "
+                   "Empty = the bundled mushroom."),
+        Param("lost_opacity", 0.18, float, 0.0, 1.0,
+              help="Opacity of a lost (used-up) mushroom. 0 = hide lost lives entirely."),
+        Param("gap", 0.12, float, 0.0, 1.0,
+              help="Spacing between mushrooms, as a fraction of icon width."),
     ])
 
     def __init__(self):
@@ -101,8 +105,6 @@ class MarioHud(Hud):
         x0 = (w - row_w) / 2.0
         y = (h - ih) / 2.0
 
-        warn = remaining <= t["warning_at"] * total and remaining > 0.0
-        blink = 0.5 + 0.5 * math.sin(ctx.now * 9.0)
         for i in range(total):
             cx = x0 + i * (slot_w + gap) + (slot_w - iw) / 2.0
             alive = remaining - i                      # >=1 full, (0,1) fading, <=0 lost
@@ -114,24 +116,9 @@ class MarioHud(Hud):
                 op = t["lost_opacity"]
             if op <= 0.0:
                 continue
-            # the single last-standing life blinks when critically low
-            if warn and 0.0 < alive <= 1.0:
-                op = min(1.0, op * (0.5 + 0.5 * blink))
             p.setOpacity(op)
             p.drawImage(QRectF(cx, y, iw, ih), icon_img)
         p.setOpacity(1.0)
 
-        if warn:
-            p.setPen(QColor(*self.MAGENTA, int((0.6 + 0.4 * blink) * 255)))
-            f = QFont("monospace")
-            f.setBold(True)
-            f.setPixelSize(int(max(10, h * 0.16)))
-            p.setFont(f)
-            p.drawText(QRectF(0, 0, w, h * 0.3),
-                       Qt.AlignHCenter | Qt.AlignTop, "1-UP?")
-
     def is_animating(self, ctx):
-        total, remaining = self.lives(ctx)
-        t = self.tuned(ctx)
-        warn = 0.0 < remaining <= t["warning_at"] * total
-        return warn or self.flash(ctx) > 0.0
+        return self.flash(ctx) > 0.0

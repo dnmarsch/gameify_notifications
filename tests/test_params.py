@@ -88,6 +88,50 @@ def test_int_param_truncates_float_in_range():
     assert spec().validate({"count": 3.9})["count"] == 3
 
 
+# ---- UI metadata (slider() / control()) -----------------------------------
+def test_control_type_by_kind():
+    assert Param("a", 0.5, float, 0.0, 1.0).control() == "slider"
+    assert Param("a", 2, int, 1, 10).control() == "slider"
+    assert Param("a", True, bool).control() == "toggle"
+    assert Param("a", "x", str).control() == "text"
+
+
+def test_slider_none_for_non_numeric():
+    assert Param("a", True, bool).slider() is None
+    assert Param("a", "x", str).slider() is None
+
+
+def test_slider_auto_step_is_ten_percent():
+    assert Param("frac", 0.5, float, 0.0, 1.0).slider() == (0.0, 1.0, 0.1)
+    assert Param("intensity", 0.5, float, 0.0, 3.0).slider() == (0.0, 3.0, 0.3)
+
+
+def test_slider_int_step_rounds_min_one():
+    assert Param("level", 50, int, 1, 100).slider() == (1, 100, 10)   # 10% of 99 -> 10
+    assert Param("segments", 9, int, 3, 40).slider() == (3, 40, 4)    # 10% of 37 -> 4
+    assert Param("res", 2, int, 1, 10).slider() == (1, 10, 1)         # 10% of 9 -> 1
+
+
+def test_slider_ui_overrides_validation_range_and_step():
+    # max_messages validates 0..1e6 but the slider is 0..50, whole-number step 1
+    p = Param("max_messages", 0, int, 0, 1_000_000, ui_max=50, step=1)
+    assert p.slider() == (0, 50, 1)
+    # weight_scale validates 0..1000, slider 0..5
+    assert Param("weight_scale", 1.0, float, 0.0, 1000.0, ui_max=5.0).slider() == (0.0, 5.0, 0.5)
+
+
+def test_builtin_hud_specs_expose_sliders():
+    # every numeric knob in a real HUD's effective spec yields a sane slider
+    from gameify_notifications.huds import load_huds
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    for hud in load_huds().values():
+        for p in hud._spec()._params.values():
+            if p.control() == "slider":
+                lo, hi, step = p.slider()
+                assert lo < hi and step > 0
+
+
 def test_extend_merges_and_keeps_specific_on_collision():
     common = [Param("max_messages", 0, int, 0, 100), Param("weight_scale", 1.0, float, 0.0, 10.0)]
     merged = spec().extend(common)

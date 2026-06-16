@@ -18,17 +18,57 @@ class Param:
 
     `validate` is an optional extra predicate (value -> bool) for types a range
     can't express -- e.g. "this path must exist". A value failing it falls back
-    to the default like any other rejection."""
+    to the default like any other rejection.
 
-    __slots__ = ("name", "default", "kind", "lo", "hi", "validate")
+    UI metadata (`ui_min`/`ui_max`/`step`) describes how a settings slider should
+    present the param. They default sensibly from [lo, hi] with a 10%-of-range
+    step, and are only set explicitly where the validation range is unsuitable
+    for a slider (e.g. max_messages validates up to 1e6 but the slider shows
+    0-50). See `slider()` / `control()`."""
 
-    def __init__(self, name, default, kind=float, lo=None, hi=None, validate=None):
+    __slots__ = ("name", "default", "kind", "lo", "hi", "validate",
+                 "ui_min", "ui_max", "step", "help", "is_file")
+
+    def __init__(self, name, default, kind=float, lo=None, hi=None, validate=None,
+                 ui_min=None, ui_max=None, step=None, help="", is_file=False):
         self.name = name
         self.default = default
         self.kind = kind
         self.lo = lo
         self.hi = hi
         self.validate = validate
+        self.ui_min = ui_min
+        self.ui_max = ui_max
+        self.step = step
+        self.help = help          # one-line description for the settings ⓘ tooltip
+        self.is_file = is_file    # str param that's a file path -> show a Browse button
+
+    def control(self):
+        """Which settings control fits this param: 'toggle' (bool), 'text'
+        (str), or 'slider' (numeric)."""
+        if self.kind is bool:
+            return "toggle"
+        if self.kind is str:
+            return "text"
+        return "slider"
+
+    def slider(self):
+        """Slider metadata for a numeric param -> (lo, hi, step), or None for
+        non-numeric. `lo`/`hi` come from ui_min/ui_max (else the validation
+        range); `step` is explicit or 10% of the span (int -> rounded, min 1)."""
+        if self.control() != "slider":
+            return None
+        lo = self.ui_min if self.ui_min is not None else (self.lo if self.lo is not None else 0)
+        hi = self.ui_max if self.ui_max is not None else (self.hi if self.hi is not None else lo + 1)
+        if self.step is not None:
+            step = self.step
+        elif self.kind is int:
+            step = max(1, round((hi - lo) * 0.10))
+        else:
+            step = round((hi - lo) * 0.10, 4)
+        if self.kind is int:
+            return (int(lo), int(hi), int(step))
+        return (float(lo), float(hi), float(step))
 
     def coerce(self, value):
         """-> (ok, value). ok=False means the value was rejected; `value` is then

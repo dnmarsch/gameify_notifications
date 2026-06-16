@@ -63,6 +63,56 @@ def test_set_writes_atomically_no_tmp_left():
 
 def test_set_value_types_roundtrip():
     config.set_config_value(["dock_panel"], False)
-    config.set_config_value(["hud"], "halo")
+    config.set_config_value(["active_hud"], "halo")
     d = _toml()
-    assert d["dock_panel"] is False and d["hud"] == "halo"
+    assert d["dock_panel"] is False and d["active_hud"] == "halo"
+
+
+def test_active_hud_key_does_not_clobber_per_hud_tables():
+    # the active-HUD selection lives under its OWN key; it must never overwrite
+    # the [hud.<name>] tuning namespace.
+    config.rules_file().write_text('[hud.pokemon]\nname = "Charry"\nlevel = 99\n')
+    config.set_config_value(["active_hud"], "pokemon")
+    d = _toml()
+    assert d["active_hud"] == "pokemon"
+    assert d["hud"]["pokemon"]["name"] == "Charry"   # per-HUD params survive
+    assert d["hud"]["pokemon"]["level"] == 99
+
+
+def test_set_scalar_to_hud_namespace_is_refused():
+    # the generic setter must reject ["hud"] = scalar (the old clobber footgun),
+    # leaving any existing per-HUD tuning untouched.
+    import pytest
+    config.rules_file().write_text('[hud.pokemon]\nname = "Charry"\n')
+    with pytest.raises(ValueError):
+        config.set_config_value(["hud"], "cod")
+    assert _toml()["hud"]["pokemon"]["name"] == "Charry"   # file untouched
+    # the nested form (real tuning writes) still works fine
+    config.set_config_value(["hud", "cod", "intensity"], 0.6)
+    assert _toml()["hud"]["cod"]["intensity"] == 0.6
+
+
+def test_get_config_value_reads_and_defaults():
+    config.rules_file().write_text(
+        'active_hud = "goldeneye"\n[hud.halo]\nshield_fraction = 0.3\n')
+    assert config.get_config_value(["active_hud"]) == "goldeneye"
+    assert config.get_config_value(["hud", "halo", "shield_fraction"]) == 0.3
+    assert config.get_config_value(["nope"]) is None              # absent -> None
+    assert config.get_config_value(["active_hud", "x"], "d") == "d"  # non-dict descent
+
+
+def test_reset_hud_drops_table_keeps_rest():
+    config.rules_file().write_text(
+        "max_messages = 10.0\n\n[hud.halo]\nshield_fraction = 0.2\n\n"
+        "[hud.cod]\nintensity = 0.9\n")
+    config.reset_hud("halo")
+    d = _toml()
+    assert "halo" not in d["hud"]                 # halo reset to defaults
+    assert d["hud"]["cod"]["intensity"] == 0.9    # other HUD + top-level preserved
+    assert d["max_messages"] == 10.0
+
+
+def test_reset_hud_absent_is_noop():
+    config.rules_file().write_text("max_messages = 10.0\n")
+    config.reset_hud("halo")                      # no [hud.halo] -> no error
+    assert _toml()["max_messages"] == 10.0

@@ -30,9 +30,11 @@ from .shield_health import ShieldHealthModel
 
 class HaloHud(ShieldHealthModel, Hud):
     name = "halo"
+    display = "Halo"
     label = "Halo -- shield + health bars"
     scope = "widget"
     size = (640, 200)
+    right_gutter = 30          # keep the top-right ⊕ control off the bars/compass
 
     CYAN = (92, 219, 255)      # shield + healthy health
     RED = (204, 13, 13)        # low health only
@@ -40,10 +42,15 @@ class HaloHud(ShieldHealthModel, Hud):
     DIM = (60, 78, 96)         # empty health segment
 
     PARAMS = ParamSpec([
-        Param("shield_fraction", 0.5, float, 0.0, 1.0),
-        Param("health_red_at", 0.5, float, 0.0, 1.0),
-        Param("warning_at", 0.25, float, 0.0, 1.0),
-        Param("health_resolution", 2, int, 1, 20),
+        Param("shield_fraction", 0.5, float, 0.0, 1.0,
+              help="Share of capacity allotted to the shield bar; the rest is health. "
+                   "The shield drains entirely before health starts dropping."),
+        Param("health_red_at", 0.5, float, 0.0, 1.0,
+              help="Health turns red once it drops below this fraction of the health bar."),
+        Param("warning_at", 0.25, float, 0.0, 1.0,
+              help="Health fraction below which the 'WARNING' text flashes."),
+        Param("health_resolution", 2, int, 1, 20, ui_max=10,
+              help="Segments drawn per health unit (higher = finer-grained health bar)."),
     ])
 
     # ---- damage model: shield-drains-first (shared ShieldHealthModel) -----
@@ -61,6 +68,7 @@ class HaloHud(ShieldHealthModel, Hud):
     # ---- rendering --------------------------------------------------------
     def draw(self, p, w, h, ctx):
         t = self.tuned(ctx)
+        w = self.content_width(w)      # reserve the right gutter for the ⊕ control
         frac = self.fraction(ctx)      # 0 = full, 1 = everything depleted
         shield_units, health_units, shield_rem, health_rem = self.levels(ctx)
         warn_at = t["warning_at"]

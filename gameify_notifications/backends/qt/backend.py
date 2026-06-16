@@ -11,10 +11,13 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import QApplication
 
 from ...backends import OverlayBackend
+from ...huds import load_huds
 from ...logsetup import install_qt_message_handler
 
 log = logging.getLogger(__name__)
+from .hud_controller import HudController
 from .overlay_window import OverlayWindow
+from .panel_dock import PanelDock
 from .panel_window import PanelWindow
 from .widget_window import WidgetWindow
 
@@ -37,38 +40,11 @@ class QtOverlayBackend(OverlayBackend):
 
 
 def make_hud_window(app, monitors_provider=None):
-    """Build the HUD window for the active HUD's scope (factored out for tests)."""
+    """Build the HUD window for the active HUD's scope (factory; also used by the
+    controller, which builds one of each)."""
     if getattr(app.hud, "scope", "all") == "widget":
         return WidgetWindow(app, monitors_provider=monitors_provider)
     return OverlayWindow(app, monitors_provider=monitors_provider)
-
-
-def _build_windows(app):
-    """The HUD window (scope-dependent) and the dismiss panel."""
-    return make_hud_window(app), PanelWindow(app)
-
-
-def _wire_repaint(app, hud_win):
-    """A ~30fps timer that repaints the HUD while it wants animation, and a
-    state observer that wakes it on every damage change. Returns the timer."""
-    timer = QTimer()
-    timer.setInterval(33)  # ~30fps
-
-    def tick():
-        hud_win.update()
-        if not app.hud.is_animating(hud_win.context()):
-            timer.stop()
-
-    timer.timeout.connect(tick)
-
-    def on_state(_kind):
-        # the panel refreshes itself (it subscribes too); here we drive the HUD
-        hud_win.update()
-        if not timer.isActive():
-            timer.start()
-
-    app.state.subscribe(on_state)
-    return timer
 
 
 def _wire_capture(app, source):
@@ -99,19 +75,16 @@ def _wire_screen_changes(hud_win):
                 pass
 
 
-def _wire_config_watch(app, hud_win, panel=None):
-    """Poll rules.toml ~2x/sec; when it changes on disk, repaint the HUD and
-    refresh the panel so live edits to [hud.*] tuning / max_messages apply immediately
-    to BOTH (e.g. a max_messages change updates the overlay and the damage %).
-    Returns the timer (kept alive by the caller)."""
+def _wire_config_watch(app, on_change):
+    """Poll rules.toml ~2x/sec; call `on_change()` whenever the file changes on
+    disk, so live edits to [hud.*] tuning / max_messages apply immediately (the
+    controller repaints the active HUD + refreshes the panel). Returns the timer."""
     watch = QTimer()
     watch.setInterval(500)
 
     def poll():
         if app.rules.reload():        # mtime-gated; True only when the file changed
-            hud_win.update()
-            if panel is not None:
-                panel.refresh()
+            on_change()
 
     watch.timeout.connect(poll)
     watch.start()
@@ -153,34 +126,31 @@ def _install_sigint(qapp):
 def run_qt(app, source):
     qapp = QApplication.instance() or QApplication(sys.argv[:1])
     install_qt_message_handler()
-    scope = getattr(app.hud, "scope", "all")
-    log.info("Qt backend starting hud=%s (%s) scope=%s test_mode=%s",
-             app.hud.name, app.hud.label, scope, app.test_mode)
+    log.info("Qt backend starting hud=%s (%s) test_mode=%s",
+             app.hud.name, app.hud.label, app.test_mode)
 
-    hud_win, panel = _build_windows(app)
-    windows = [hud_win, panel]
-    timer = _wire_repaint(app, hud_win)
+    # Build BOTH window types once; the controller toggles which is shown so the
+    # HUD can be switched live without rebuilding windows.
+    widget_win = WidgetWindow(app)
+    overlay_win = OverlayWindow(app)
+    panel = PanelWindow(app)
+    dock = PanelDock(widget_win, panel) if app.rules.dock_panel else None
+    panel.show()
+    controller = HudController(app, widget_win, overlay_win, panel,
+                               load_huds(), dock)   # set_hud() shows the active window
+    # wire the panel's Settings menu to the controller (theme switch + repaint + resize)
+    panel.settings.on_hud = controller.set_hud
+    panel.settings.on_change = controller.refresh
+    panel.settings.on_resize = controller.apply_size
+
     bridge = _wire_capture(app, source)
-    _wire_screen_changes(hud_win)
-    watch = _wire_config_watch(app, hud_win, panel)
+    _wire_screen_changes(overlay_win)               # only the overlay needs re-placement
+    watch = _wire_config_watch(app, controller.refresh)
     injector = _make_test_injector(app)
-
-    for w in windows:
-        w.show()
-    dock = _wire_dock(app, hud_win, panel)        # after show: real geometry to dock against
 
     # keep Python objects alive for the app's lifetime
     heartbeat = _install_sigint(qapp)
-    qapp._cod_refs = (windows, timer, bridge, injector, heartbeat, watch, dock)
+    qapp._cod_refs = (widget_win, overlay_win, panel, controller, dock,
+                      bridge, injector, heartbeat, watch)
 
     return qapp.exec()
-
-
-def _wire_dock(app, hud_win, panel):
-    """Dock the panel beneath a widget HUD when `dock_panel` is on; the
-    all-monitor cod overlay has nothing to dock to and keeps a free panel.
-    Returns the PanelDock (kept alive) or None."""
-    if getattr(app.hud, "scope", "all") != "widget" or not app.rules.dock_panel:
-        return None
-    from .panel_dock import PanelDock
-    return PanelDock(hud_win, panel)

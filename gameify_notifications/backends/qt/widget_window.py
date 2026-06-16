@@ -25,7 +25,7 @@ class WidgetWindow(QWidget):
         self.setObjectName("hudWidget")
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setMinimumSize(140, 60)
+        self.apply_min_size()
 
         self.center_btn = QPushButton("⊕", self)        # circled plus
         self.center_btn.setObjectName("hud.centerBtn")
@@ -43,6 +43,13 @@ class WidgetWindow(QWidget):
             center_fn=top_center_rect)          # ⊕ snaps to top-centre (Halo-style)
         self.center_btn.clicked.connect(self._do_center)
         self._reposition_controls()
+
+    def apply_min_size(self):
+        """Set the resize floor from the active HUD's `min_size` (HUDs like
+        Stardew allow a much narrower box than the default). Called on construction
+        and whenever the HUD switches."""
+        mw, mh = getattr(self.app.hud, "min_size", (140, 60))
+        self.setMinimumSize(int(mw), int(mh))
 
     def _configured_size(self):
         """The HUD's box size: [hud.<name>] width/height if set, else its default."""

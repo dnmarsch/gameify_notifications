@@ -21,15 +21,28 @@ from . import Hud, Param, ParamSpec
 
 class CodHud(Hud):
     name = "cod"
+    display = "Call Of Duty"
     label = "Call of Duty -- damage vignette"
     scope = "all"
 
     RED = (196, 8, 8)
 
+    # The menu focuses on the vignette's shape (clear_at_rest / max_encroachment)
+    # and intensity. weight_scale is hidden (stays 1); max_alpha & dock_panel are
+    # hidden because cod ignores max_alpha (intensity is the opacity control) and
+    # never docks the panel.
+    HIDDEN_SETTINGS = ("weight_scale", "max_alpha", "dock_panel")
+
     PARAMS = ParamSpec([
-        Param("clear_at_rest", 0.85, float, 0.0, 1.0),
-        Param("max_encroachment", 0.18, float, 0.0, 1.0),
-        Param("intensity", 0.5, float, 0.0, 3.0),
+        Param("clear_at_rest", 0.85, float, 0.0, 1.0,
+              help="Inner clear-radius at zero damage (1.0 = red only at the very edge). "
+                   "How much of the centre stays clear when there's no damage."),
+        Param("max_encroachment", 0.18, float, 0.0, 1.0,
+              help="Inner clear-radius at full damage -- how far the red creeps toward "
+                   "the centre. Smaller = creeps further in."),
+        Param("intensity", 0.6, float, 0.0, 3.0,
+              help="Peripheral-red opacity at full damage (cod ignores max_alpha, so "
+                   "this is the sole opacity control). Higher = redder."),
     ])
 
     def encroachment(self, frac, clear_at_rest=0.85, max_encroachment=0.18):
@@ -42,12 +55,13 @@ class CodHud(Hud):
         return clear_at_rest - (clear_at_rest - max_encroachment) * math.sqrt(frac)
 
     def edge_alpha(self, ctx, frac):
-        """Peripheral red opacity -- linear in damage at slope `intensity`
-        (default 0.5, gentle), capped by max_alpha, 0 at rest, plus a brief
-        'took a hit' flash on a new notification."""
+        """Peripheral red opacity -- linear in damage at slope `intensity`, 0 at
+        rest, plus a brief 'took a hit' flash on a new notification. cod ignores
+        the global max_alpha (uses a 1.0 ceiling), so `intensity` alone sets how
+        opaque the edges get at full damage."""
         intensity = self.tuned(ctx)["intensity"]
-        a = intensity * frac * ctx.max_alpha
-        return min(ctx.max_alpha, a + self.flash(ctx, duration=0.5, peak=0.2))
+        a = intensity * frac
+        return min(1.0, a + self.flash(ctx, duration=0.5, peak=0.2))
 
     def draw(self, p, w, h, ctx):
         t = self.tuned(ctx)

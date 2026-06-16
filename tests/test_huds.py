@@ -30,6 +30,19 @@ def cod(qapp):
     return load_huds()["cod"]
 
 
+def test_right_gutter_reserved_for_control_on_named_huds(qapp):
+    # stardew/goldeneye/halo reserve a transparent right gutter so the widget's
+    # ⊕ control doesn't overlap their content; others use the full width.
+    huds = load_huds()
+    for name in ("stardew", "goldeneye", "halo"):
+        g = huds[name].right_gutter
+        assert g >= 28, name                          # clears the 22px ⊕ + margin
+        assert huds[name].content_width(300) == 300 - g
+    for name in ("cod", "mario", "pokemon"):
+        assert huds[name].right_gutter == 0, name
+        assert huds[name].content_width(300) == 300
+
+
 @pytest.fixture
 def halo(qapp):
     return load_huds()["halo"]
@@ -57,11 +70,12 @@ def test_cod_encroachment_shrinks_with_damage(cod):
     assert cod.encroachment(1.0) >= 0.12         # a readable centre still remains
 
 
-def test_cod_edge_alpha_gentle_and_zero_at_rest(cod, make_ctx):
+def test_cod_edge_alpha_zero_at_rest_and_ignores_max_alpha(cod, make_ctx):
     assert cod.edge_alpha(make_ctx(total_weight=0.0), 0.0) == 0.0
-    full = cod.edge_alpha(make_ctx(total_weight=6.0), 1.0)
-    assert full <= make_ctx().max_alpha                       # never exceeds the ceiling
-    assert full <= 0.5 * make_ctx().max_alpha + 1e-6          # halved slope (gentle)
+    # cod ignores max_alpha: at full damage the edge opacity == intensity (default
+    # 0.6), regardless of the global max_alpha.
+    assert abs(cod.edge_alpha(make_ctx(total_weight=6.0, max_alpha=0.3), 1.0) - 0.6) < 1e-9
+    assert cod.edge_alpha(make_ctx(total_weight=6.0), 1.0) <= 1.0
 
 
 def test_halo_shield_full_is_cyan_empty_is_red(halo, make_ctx):

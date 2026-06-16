@@ -23,9 +23,14 @@ def _lerp(c0, c1, f):
 
 class GoldenEyeHud(ShieldHealthModel, Hud):
     name = "goldeneye"
+    display = "GoldenEye"
     label = "GoldenEye -- health + armor arcs"
     scope = "widget"
     size = (240, 240)          # square -> the ring centers with even margins
+    right_gutter = 30          # keep the top-right ⊕ control off the arcs
+
+    # max_alpha only affects Halo's WARNING border; hide it here (no-op).
+    HIDDEN_SETTINGS = ("max_alpha",)
 
     HEALTH_TOP = (224, 36, 24)     # red (top of the left arc)
     HEALTH_BOT = (250, 214, 44)    # yellow (bottom)
@@ -34,8 +39,11 @@ class GoldenEyeHud(ShieldHealthModel, Hud):
     DIM = (54, 60, 74)             # depleted tick
 
     PARAMS = ParamSpec([
-        Param("shield_fraction", 0.5, float, 0.0, 1.0),   # share of capacity = shield
-        Param("segments", 9, int, 3, 40),                 # ticks per arc
+        Param("shield_fraction", 0.5, float, 0.0, 1.0,
+              help="Share of capacity given to the shield arc (right); the rest is the "
+                   "health arc (left). The shield drains entirely before health."),
+        Param("segments", 9, int, 3, 40,
+              help="Number of tick segments drawn per arc."),
     ])
 
     # ---- damage model: shield-drains-first (shared ShieldHealthModel) -----
@@ -51,6 +59,7 @@ class GoldenEyeHud(ShieldHealthModel, Hud):
     def draw(self, p, w, h, ctx):
         shield_frac, health_frac = self.levels(ctx)
         segs = self.tuned(ctx)["segments"]
+        w = self.content_width(w)      # reserve the right gutter for the ⊕ control
         cx, cy = w / 2.0, h / 2.0
         radius = min(w, h) * 0.42      # fill the box -> smaller empty margin
         thickness = radius * 0.30

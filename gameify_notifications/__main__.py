@@ -9,6 +9,16 @@ import threading
 from . import config
 
 
+def choose_hud(arg_hud, persisted, available, default="cod"):
+    """Resolve which HUD to render at startup (pure; no I/O).
+
+    Priority: an explicit --hud (`arg_hud`) wins, else the last session's
+    `persisted` choice, else `default`. A name not in `available` falls back to
+    `default` (which is assumed present)."""
+    name = arg_hud or persisted or default
+    return name if name in available else default
+
+
 def run_inspect(source):
     print(f"Inspecting via {source.describe()}.")
     print("Trigger DMs / channel posts / meetings / calls in Teams; Ctrl-C to stop.\n")
@@ -41,7 +51,10 @@ def main(argv=None):
                         help="optional capture prefilter (substring of app name/text); "
                              "empty (default) forwards all notifications and lets "
                              "rules.toml decide which apps matter")
-    parser.add_argument("--hud", default="cod", help="HUD to render (cod, halo, ...)")
+    parser.add_argument("--hud", default=None,
+                        help="HUD to render (cod, halo, mario, pokemon, goldeneye). "
+                             "An explicit choice is remembered for next launch; with no "
+                             "--hud the last-selected HUD is used (or cod on first run).")
     parser.add_argument("--source", default="auto",
                         help="capture strategy: 'auto' (platform default; Linux "
                              "composes freedesktop+portal), or comma-separated "
@@ -110,11 +123,16 @@ def main(argv=None):
             print(f"  {name:10s} {hud.label}  [scope={getattr(hud, 'scope', 'all')}]")
         return 0
 
-    hud = huds.get(args.hud)
-    if hud is None:
+    # --hud wins for this run AND is remembered; with no --hud, use the HUD the
+    # user last selected (persisted in rules.toml under `active_hud`).
+    persisted = config.get_config_value(["active_hud"])
+    if args.hud is not None and args.hud not in huds:
         print(f"Unknown HUD '{args.hud}'. Available: {', '.join(sorted(huds))}",
               file=sys.stderr)
-        hud = huds["cod"]
+    chosen = choose_hud(args.hud, persisted, huds)
+    hud = huds[chosen]
+    if args.hud is not None:                 # remember an explicit choice for next launch
+        config.set_config_value(["active_hud"], chosen)
     probe = None if args.no_focus_suppress else select_focus_probe()
     app = App(hud, args.match, test_mode=args.test, focus_probe=probe)
     source = None if args.test else select_source(args.match, args.source)

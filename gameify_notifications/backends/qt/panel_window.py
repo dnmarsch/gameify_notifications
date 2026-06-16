@@ -11,8 +11,10 @@ from PySide6.QtWidgets import (QWidget, QLabel, QPushButton, QVBoxLayout,
 
 from ... import config
 from ...geometry import default_panel_rect
+from ...huds import load_huds
 from ._context import make_context
 from .persistence import QtPersistent
+from .settings_panel import SettingsPanel
 
 _STYLE = (
     "#panel{background:rgba(18,20,26,235);}"
@@ -58,7 +60,11 @@ class PanelWindow(QWidget):
         self.header.setToolTip("Drag to move")
         hb = QHBoxLayout(self.header)
         hb.setContentsMargins(8, 6, 8, 6)
-        self.title = QLabel("☰  <b>INCOMING FIRE</b>")   # ☰ grip = draggable
+        self.settings_btn = QPushButton("⚙")   # the old ☰ grip is now a settings gear
+        self.settings_btn.setObjectName("panel.settingsBtn")
+        self.settings_btn.setFixedWidth(28)
+        self.settings_btn.setToolTip("Settings: theme + live tuning")
+        self.title = QLabel("<b>INCOMING FIRE</b>")
         self.title.setTextFormat(Qt.RichText)
         # let clicks on the title fall through to the header so the WHOLE bar drags
         self.title.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -68,10 +74,17 @@ class PanelWindow(QWidget):
         self.collapse_btn.setObjectName("panel.collapseBtn")
         self.collapse_btn.setFixedWidth(28)
         self.collapse_btn.setToolTip("Collapse to toolbar")
+        hb.addWidget(self.settings_btn)
         hb.addWidget(self.title, 1)
         hb.addWidget(self.clear_btn)
         hb.addWidget(self.collapse_btn)
         root.addWidget(self.header)
+
+        # Settings is a SEPARATE window (so it isn't squeezed by the panel's
+        # height); the gear toggles + positions it. Parented to the panel so it's
+        # cleaned up with it.
+        self.settings = SettingsPanel(app, load_huds(), parent=self)
+        self.settings_btn.clicked.connect(self._toggle_settings)
 
         self.status = QLabel()
         self.status.setObjectName("panel.status")
@@ -165,6 +178,23 @@ class PanelWindow(QWidget):
         self.app.state.clear()
         self.cleared.emit()
 
+    # ---- settings --------------------------------------------------------
+    def _toggle_settings(self):
+        # use isHidden() (explicit state), not isVisible() -- the latter is False
+        # whenever an ancestor is hidden, which would break the toggle.
+        if self.settings.isHidden():
+            self.settings.build()                  # open with current values
+            g = self.frameGeometry()
+            scr = self.screen().availableGeometry() if self.screen() else None
+            x = g.x() + g.width() + 8              # to the right of the panel...
+            if scr is not None and x + self.settings.width() > scr.right():
+                x = max(scr.left(), g.x() - self.settings.width() - 8)   # ...else to the left
+            self.settings.move(x, g.y())
+            self.settings.show()
+            self.settings.raise_()
+        else:
+            self.settings.hide()
+
     # ---- collapse / expand ----------------------------------------------
     def is_collapsed(self):
         return self._collapsed
@@ -178,6 +208,7 @@ class PanelWindow(QWidget):
             self.status.hide()
             self.scroll.hide()
             self.grip.hide()
+            self.settings.hide()         # collapsing also closes the settings section
             self.collapse_btn.setText("▸")
             self.collapse_btn.setToolTip("Expand")
             self.setFixedHeight(self.header.sizeHint().height())

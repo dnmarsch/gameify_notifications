@@ -12,6 +12,7 @@ from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QColor, QImage, QPen, QFont
 
 from . import Hud, Param, ParamSpec
+from . import bar_color
 from .. import config
 
 
@@ -24,23 +25,33 @@ def _icon_exists(path):
 
 class PokemonHud(Hud):
     name = "pokemon"
+    display = "Pokémon"
     label = "Pokemon -- HP bar + sprite"
     scope = "widget"
     size = (560, 150)
 
-    GREEN = (88, 208, 120)     # HP 70-100%
-    YELLOW = (240, 200, 48)    # HP 30-70%
-    RED = (216, 64, 48)        # HP 0-30%
+    GREEN = bar_color.GREEN    # HP 70-100% (shared green->yellow->red thresholds)
+    YELLOW = bar_color.YELLOW  # HP 30-70%
+    RED = bar_color.RED        # HP 0-30%
     BOX = (248, 248, 224)      # cream battle box
     INK = (56, 56, 64)         # dark text / border
     HP_LABEL = (216, 152, 40)  # the orange "HP" tag
 
+    # max_alpha only affects Halo's WARNING border; hide it here (no-op).
+    HIDDEN_SETTINGS = ("max_alpha",)
+
     PARAMS = ParamSpec([
-        Param("name", "BULBASAUR", str),                      # trainer-given name
-        Param("level", 50, int, 1, 100),
-        Param("icon_path", "", str, validate=_icon_exists),   # "" -> bundled sprite
-        Param("green_above", 0.70, float, 0.0, 1.0),          # >= this HP -> green
-        Param("yellow_above", 0.30, float, 0.0, 1.0),         # >= this HP -> yellow, else red
+        Param("name", "BULBASAUR", str,
+              help="Name shown above the level in the battle box."),
+        Param("level", 50, int, 1, 100, step=1,
+              help="Level number shown in the battle box (1-100)."),
+        Param("icon_path", "", str, validate=_icon_exists, is_file=True,
+              help="Path to a custom sprite PNG (transparent background). "
+                   "Empty = the bundled Bulbasaur."),
+        Param("green_above", 0.70, float, 0.0, 1.0,
+              help="HP at or above this fraction shows green."),
+        Param("yellow_above", 0.30, float, 0.0, 1.0,
+              help="HP at or above this shows yellow; below it shows red."),
     ])
 
     def __init__(self):
@@ -53,11 +64,7 @@ class PokemonHud(Hud):
         return max(0.0, min(1.0, 1.0 - self.fraction(ctx)))
 
     def hp_color(self, hp, green_above=0.70, yellow_above=0.30):
-        if hp >= green_above:
-            return self.GREEN
-        if hp >= yellow_above:
-            return self.YELLOW
-        return self.RED
+        return bar_color.fill_color(hp, green_above, yellow_above)
 
     # ---- asset loading (lazy + size-cached) ------------------------------
     def _sprite_path(self, icon_path):

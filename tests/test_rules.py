@@ -45,7 +45,7 @@ def test_dock_panel_default_and_parsing():
 def test_default_hud_params_loaded(rules):
     # the shipped rules.toml documents [hud.halo] / [hud.cod] tuning tables
     assert rules.params_for("halo")["shield_fraction"] == 0.5
-    assert rules.params_for("cod")["intensity"] == 0.5
+    assert rules.params_for("cod")["intensity"] == 0.6
     assert rules.params_for("nope") == {}          # unknown HUD -> empty
 
 

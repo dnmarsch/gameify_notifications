@@ -59,7 +59,7 @@ def test_missing_icon_path_still_renders_bundled(mario, make_ctx):
 
 
 # ---- rendering: the row empties as damage rises ---------------------------
-_MP = {"lost_opacity": 0.18, "gap": 0.12, "warning_at": 0.25}
+_MP = {"lost_opacity": 0.18, "gap": 0.12}
 
 
 def test_full_lives_more_opaque_than_fewer(mario, make_ctx):
@@ -72,7 +72,7 @@ def test_full_lives_more_opaque_than_fewer(mario, make_ctx):
 
 def test_lost_opacity_zero_hides_lost_lives(mario, make_ctx):
     w, h = 600, 96
-    hidden = {"lost_opacity": 0.0, "gap": 0.12, "warning_at": 0.25}
+    hidden = {"lost_opacity": 0.0, "gap": 0.12}
     # 5 of 10 lost; with lost_opacity 0 the lost half draws nothing
     img = render_to_image(mario, w, h,
                           make_ctx(total_weight=5.0, max_messages=10.0, w=w, h=h, params=hidden))

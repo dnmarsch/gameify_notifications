@@ -17,6 +17,18 @@ def test_widget_paints_non_empty(qtbot, make_app, single_monitor):
     assert pm.width() == 640 and pm.height() == 170
 
 
+def test_min_size_comes_from_the_active_hud(qtbot, make_app, single_monitor):
+    # Stardew allows a much narrower box than the default 140px floor
+    halo = WidgetWindow(make_app("halo"), monitors_provider=single_monitor)
+    sd = WidgetWindow(make_app("stardew"), monitors_provider=single_monitor)
+    qtbot.addWidget(halo)
+    qtbot.addWidget(sd)
+    assert halo.minimumWidth() == 140
+    assert sd.minimumWidth() == 74                   # 44px bars + 30px right gutter
+    sd.resize(74, 200)                               # can actually shrink to it
+    assert sd.width() == 74
+
+
 def test_center_button_recenters_and_persists_fraction(qtbot, make_app, single_monitor):
     app = make_app("halo")
     w = WidgetWindow(app, monitors_provider=single_monitor)

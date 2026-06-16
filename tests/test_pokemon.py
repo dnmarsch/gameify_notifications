@@ -46,6 +46,12 @@ def test_hp_is_remaining_health(poke, make_ctx):
     assert poke.hp(make_ctx(total_weight=15.0, max_messages=10.0)) == 0.0   # clamp
 
 
+def test_level_slider_steps_by_one(poke):
+    params = poke._spec()._params
+    assert params["level"].slider() == (1, 100, 1)     # whole-number level steps
+    assert params["icon_path"].is_file is True          # path param -> Browse button
+
+
 def test_hp_color_thresholds(poke):
     assert poke.hp_color(1.00) == poke.GREEN
     assert poke.hp_color(0.70) == poke.GREEN     # boundary inclusive

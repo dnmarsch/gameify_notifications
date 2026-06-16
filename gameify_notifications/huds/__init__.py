@@ -43,28 +43,39 @@ class HudContext:
 
 
 class Hud:
-    name = "base"
-    label = "Base HUD"
+    name = "base"               # internal id: --hud arg, rules.toml [hud.<name>] / hud key
+    display = ""                # friendly label for the Settings dropdown (else name)
+    label = "Base HUD"          # verbose label for --list-huds
     # "all"    -> click-through overlay spanning every monitor (peripheral)
     # "widget" -> a movable, resizable, persisted window on the primary monitor
     scope = "all"
-    size = (640, 160)   # preferred size of a "widget"-scope HUD
+    size = (640, 160)   # preferred (default) size of a "widget"-scope HUD
+    min_size = (140, 60)  # smallest a "widget"-scope HUD may be resized to
+    # px reserved on the RIGHT for the widget's top-right ⊕ control; the HUD
+    # draws into the width LEFT of it (transparent gutter). 0 = use full width.
+    right_gutter = 0
     # validated tuning knobs from rules.toml's [hud.<name>] table; subclasses
     # override with their own ParamSpec. Read via self.tuned(ctx).
     PARAMS = ParamSpec([])
+    # param names to HIDE from the Settings menu for this HUD (they still
+    # validate/apply if hand-set; just decluttered when they'd only confuse).
+    HIDDEN_SETTINGS = ()
     # Knobs EVERY overlay shares, so each HUD can independently set its own
     # capacity and drain rate. Optional in rules.toml -> these defaults apply.
     COMMON_PARAMS = [
-        # "max messages": damage capacity for this HUD. 0 = inherit the global
-        # `max_messages` from rules.toml; >0 overrides it for this overlay only.
-        Param("max_messages", 0, int, 0, 1_000_000),
-        # drain-rate multiplier on the accumulated notification weights for this
-        # HUD (2.0 = damage builds twice as fast; 0.5 = half).
-        Param("weight_scale", 1.0, float, 0.0, 1000.0),
-        # default widget box size (px). 0 = use this HUD's built-in `size`. Only
-        # meaningful for scope="widget" HUDs; the ⊕ button resets to this size.
-        Param("width", 0, int, 0, 10_000),
-        Param("height", 0, int, 0, 10_000),
+        Param("max_messages", 0, int, 0, 1_000_000, ui_max=50, step=1,
+              help="This overlay's own damage capacity (≈ unread messages to max it "
+                   "out). 0 = inherit the global max_messages; any value overrides it "
+                   "just for this HUD."),
+        Param("weight_scale", 1.0, float, 0.0, 1000.0, ui_max=5.0,
+              help="Drain-rate multiplier on notification weights for this HUD. "
+                   "2.0 = damage builds twice as fast; 0.5 = half."),
+        Param("width", 0, int, 0, 10_000, ui_max=1600,
+              help="Default widget width in pixels (0 = the HUD's built-in size). "
+                   "The ⊕ button resets the box to this."),
+        Param("height", 0, int, 0, 10_000, ui_max=1000,
+              help="Default widget height in pixels (0 = built-in). "
+                   "The ⊕ button resets the box to this."),
     ]
 
     def draw(self, p, w, h, ctx):
@@ -106,6 +117,12 @@ class Hud:
         cap = self.capacity(ctx)
         return min(1.0, self.damage(ctx) / cap) if cap > 0 else 0.0
 
+    def content_width(self, w):
+        """Drawable width after reserving `right_gutter` px on the right, so the
+        widget's top-right ⊕ control sits over empty space rather than the HUD.
+        Content then draws LEFT-aligned within the returned width."""
+        return max(1.0, float(w) - self.right_gutter)
+
     def configured_size(self, params):
         """Preferred widget box size (w, h): the [hud.<name>] width/height knobs
         if set (>0), else this HUD's built-in `size`. Used for the default
@@ -140,9 +157,10 @@ def _builtin_huds():
     from .mario import MarioHud
     from .pokemon import PokemonHud
     from .goldeneye import GoldenEyeHud
+    from .stardew import StardewHud
     return {CodHud.name: CodHud(), HaloHud.name: HaloHud(),
             MarioHud.name: MarioHud(), PokemonHud.name: PokemonHud(),
-            GoldenEyeHud.name: GoldenEyeHud()}
+            GoldenEyeHud.name: GoldenEyeHud(), StardewHud.name: StardewHud()}
 
 
 def load_huds():
