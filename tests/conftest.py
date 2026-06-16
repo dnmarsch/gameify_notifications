@@ -59,9 +59,9 @@ def make_ctx():
     """Factory for a HudContext with controllable damage and no active flash."""
     from gameify_notifications.huds import HudContext
 
-    def _make(total_weight=0.0, full_at=6.0, max_alpha=0.7, w=640, h=170,
+    def _make(total_weight=0.0, max_messages=6.0, max_alpha=0.7, w=640, h=170,
               params=None):
-        return HudContext(total_weight=total_weight, full_at=full_at,
+        return HudContext(total_weight=total_weight, max_messages=max_messages,
                           max_alpha=max_alpha, count=int(total_weight),
                           now=100.0, last_event=0.0,
                           monitors=[(0, 0, w, h)], primary=0, params=params)

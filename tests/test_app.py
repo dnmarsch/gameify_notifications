@@ -42,7 +42,7 @@ def test_close_callable_threaded_through_to_dismiss():
 
 # ---- focus-based suppression -------------------------------------------------
 _FOCUS_RULES = """
-full_at = 10.0
+max_messages = 10.0
 max_alpha = 0.7
 [[rule]]
 name = "Teams message"
@@ -92,7 +92,7 @@ def test_focus_probe_returning_none_does_not_suppress():
 
 def test_rule_without_focus_class_is_never_suppressed():
     _write_rules("""
-full_at = 10.0
+max_messages = 10.0
 [[rule]]
 name = "Teams message"
 match = 'teams\\.cloud\\.microsoft'

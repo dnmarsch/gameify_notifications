@@ -50,7 +50,7 @@ class RuleSet:
 
     def __init__(self):
         self.rules = []
-        self.full_at = 6.0
+        self.max_messages = 6.0
         self.max_alpha = 0.7
         self.dock_panel = True        # dock the dismiss panel under widget HUDs
         self.hud_params = {}          # {hud_name: {knob: value}} from [hud.<name>]
@@ -82,7 +82,7 @@ class RuleSet:
                         exc_info=True)
             data = tomllib.loads(config.DEFAULT_RULES)
 
-        self.full_at = _as_float(data.get("full_at"), 6.0, "full_at") or 6.0
+        self.max_messages = _as_float(data.get("max_messages"), 6.0, "max_messages") or 6.0
         self.max_alpha = _as_float(data.get("max_alpha"), 0.7, "max_alpha")
         dp = data.get("dock_panel", True)        # only a real bool counts; else default
         self.dock_panel = dp if isinstance(dp, bool) else True

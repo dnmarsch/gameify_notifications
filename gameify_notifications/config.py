@@ -80,7 +80,7 @@ DEFAULT_RULES = """\
 # setup -- Teams + Outlook running in Chrome -- where the site origin shows up
 # in the notification body (e.g. body == "teams.cloud.microsoft").
 
-full_at   = 10.0    # total weight at which the HUD is maxed (full red / empty shield);
+max_messages   = 10.0    # total weight at which the HUD is maxed (full red / empty shield);
                     # i.e. the unread-message budget. Raise it to make damage build slower.
 max_alpha = 0.7     # opacity ceiling so the screen never goes fully opaque
 dock_panel = true   # dock the dismiss panel under widget HUDs (halo/mario/pokemon/
@@ -91,7 +91,7 @@ dock_panel = true   # dock the dismiss panel under widget HUDs (halo/mario/pokem
 # EVERY [hud.*] block also accepts these optional universal knobs (omit them to
 # use the defaults shown); they let each overlay set its own capacity, drain, and
 # default widget box size:
-#   max_messages = 0     # this HUD's damage capacity; 0 = inherit global full_at
+#   max_messages = 0     # this HUD's damage capacity; 0 = inherit global max_messages
 #   weight_scale = 1.0   # drain-rate multiplier on notification weights (2.0 = 2x)
 #   width  = 0           # default widget box width  px (0 = the HUD's built-in size)
 #   height = 0           # default widget box height px (0 = the HUD's built-in size)
@@ -99,7 +99,7 @@ dock_panel = true   # dock the dismiss panel under widget HUDs (halo/mario/pokem
 #
 # Halo (shield + health bars):
 [hud.halo]
-shield_fraction  = 0.5    # share of `full_at` allotted to the shield (rest = health)
+shield_fraction  = 0.5    # share of `max_messages` allotted to the shield (rest = health)
 health_red_at    = 0.5    # health turns red once it drops below this fraction
 warning_at       = 0.25   # health fraction below which "WARNING" flashes
 health_resolution = 2     # health-bar segments per health unit (higher = finer)
@@ -110,7 +110,7 @@ clear_at_rest    = 0.85   # inner clear radius at 0 damage (1.0 = red only at th
 max_encroachment = 0.18   # inner clear radius at full damage (smaller = red creeps further in)
 intensity        = 0.5    # peripheral-red opacity slope (x damage x max_alpha); gentle at 0.5
 
-# Mario (mushroom lives -- one mushroom per unit of full_at, lost per damage):
+# Mario (mushroom lives -- one mushroom per unit of max_messages, lost per damage):
 [hud.mario]
 # icon_path   = "/path/to/icon.png"   # default: bundled mushroom (transparent bg)
 lost_opacity = 0.18   # opacity of a lost mushroom (0 = hide it entirely)
@@ -229,6 +229,34 @@ class MySource(NotificationSource):
     def describe(self):
         return "my custom source"
 '''
+
+
+# --------------------------------------------------------------------------
+# Live config writeback (GUI settings -> rules.toml)
+# --------------------------------------------------------------------------
+def set_config_value(keys, value):
+    """Set rules.toml at the nested `keys` path to `value`, preserving the
+    user's comments, ordering, and formatting (round-trip via tomlkit), then
+    write atomically so the hot-reloader never sees a half-written file.
+
+    `keys` is a path list: ["max_messages"] for a top-level key, or
+    ["hud", "halo", "shield_fraction"] for a nested table. Intermediate tables
+    are created as needed. This is how the Settings GUI edits the same file the
+    user can hand-edit -- both flow through rules.toml + the existing reload."""
+    import tomlkit                                   # lazy: only writers need it
+    path = rules_file()
+    config_dir().mkdir(parents=True, exist_ok=True)
+    text = path.read_text() if path.exists() else DEFAULT_RULES
+    doc = tomlkit.parse(text)
+    node = doc
+    for k in keys[:-1]:
+        if k not in node or not isinstance(node.get(k), dict):
+            node[k] = tomlkit.table()
+        node = node[k]
+    node[keys[-1]] = value
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(tomlkit.dumps(doc))
+    tmp.replace(path)                                # atomic on POSIX
 
 
 # --------------------------------------------------------------------------

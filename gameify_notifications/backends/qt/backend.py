@@ -101,7 +101,7 @@ def _wire_screen_changes(hud_win):
 
 def _wire_config_watch(app, hud_win, panel=None):
     """Poll rules.toml ~2x/sec; when it changes on disk, repaint the HUD and
-    refresh the panel so live edits to [hud.*] tuning / full_at apply immediately
+    refresh the panel so live edits to [hud.*] tuning / max_messages apply immediately
     to BOTH (e.g. a max_messages change updates the overlay and the damage %).
     Returns the timer (kept alive by the caller)."""
     watch = QTimer()

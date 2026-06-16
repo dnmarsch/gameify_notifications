@@ -122,7 +122,7 @@ class PanelWindow(QWidget):
     def damage_percent(self):
         """Damage as a percentage of the ACTIVE overlay's capacity:
         (weight_scale x total weight) / max_messages, where max_messages is that
-        HUD's optional capacity knob (else the global full_at). So the panel
+        HUD's optional capacity knob (else the global max_messages). So the panel
         reads the same damage the overlay shows -- not a raw count."""
         ctx = make_context(self.app, [(0, 0, 1, 1)])
         return self.app.hud.fraction(ctx) * 100.0

@@ -23,13 +23,13 @@ log = logging.getLogger(__name__)
 
 
 class HudContext:
-    __slots__ = ("total_weight", "full_at", "max_alpha", "count",
+    __slots__ = ("total_weight", "max_messages", "max_alpha", "count",
                  "now", "last_event", "monitors", "primary", "params")
 
-    def __init__(self, total_weight, full_at, max_alpha, count, now,
+    def __init__(self, total_weight, max_messages, max_alpha, count, now,
                  last_event, monitors, primary, params=None):
         self.total_weight = total_weight
-        self.full_at = full_at
+        self.max_messages = max_messages
         self.max_alpha = max_alpha
         self.count = count
         self.now = now
@@ -56,7 +56,7 @@ class Hud:
     # capacity and drain rate. Optional in rules.toml -> these defaults apply.
     COMMON_PARAMS = [
         # "max messages": damage capacity for this HUD. 0 = inherit the global
-        # `full_at` from rules.toml; >0 overrides it for this overlay only.
+        # `max_messages` from rules.toml; >0 overrides it for this overlay only.
         Param("max_messages", 0, int, 0, 1_000_000),
         # drain-rate multiplier on the accumulated notification weights for this
         # HUD (2.0 = damage builds twice as fast; 0.5 = half).
@@ -92,11 +92,11 @@ class Hud:
     # ---- shared damage model (honors per-HUD max_messages / weight_scale) ----
     def capacity(self, ctx):
         """Damage needed to max this HUD: per-HUD `max_messages` if set, else
-        the global `full_at`."""
+        the global `max_messages`."""
         mm = self.tuned(ctx)["max_messages"]
         if mm and mm > 0:
             return float(mm)
-        return float(ctx.full_at) if ctx.full_at > 0 else 1.0
+        return float(ctx.max_messages) if ctx.max_messages > 0 else 1.0
 
     def damage(self, ctx):
         """Accumulated notification weight scaled by this HUD's drain rate."""

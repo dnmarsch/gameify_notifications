@@ -108,7 +108,7 @@ def _common_spec():
 
 def test_common_params_default_when_absent():
     out = _common_spec().validate({})
-    assert out["max_messages"] == 0      # 0 -> inherit global full_at
+    assert out["max_messages"] == 0      # 0 -> inherit global max_messages
     assert out["weight_scale"] == 1.0    # 1.0 -> unscaled drain
     assert out["width"] == 0             # 0 -> use the HUD's built-in size
     assert out["height"] == 0

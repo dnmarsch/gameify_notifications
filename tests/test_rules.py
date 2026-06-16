@@ -30,7 +30,7 @@ def test_unmatched_is_ignored(rules):
 
 
 def test_defaults_loaded(rules):
-    assert rules.full_at == 10.0
+    assert rules.max_messages == 10.0
     assert 0 < rules.max_alpha <= 1.0
 
 
@@ -126,9 +126,9 @@ weight = 1.0
     assert [r.name for r in RuleSet().rules] == ["Ok"]
 
 
-def test_bad_full_at_falls_back_to_default():
+def test_bad_max_messages_falls_back_to_default():
     _write_rules("""
-full_at = "lots"
+max_messages = "lots"
 
 [[rule]]
 name = "Ok"
@@ -136,7 +136,7 @@ app = "teams"
 weight = 1.0
 """)
     rs = RuleSet()
-    assert rs.full_at == 6.0
+    assert rs.max_messages == 6.0
     assert [r.name for r in rs.rules] == ["Ok"]
 
 

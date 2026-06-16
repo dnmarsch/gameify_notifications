@@ -68,7 +68,7 @@ that client actually fills:
 copy is a separate `Notify`). Then:
 
 ```toml
-full_at   = 6.0
+max_messages   = 6.0
 max_alpha = 0.7
 
 [[rule]]

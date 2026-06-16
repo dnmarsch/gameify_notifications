@@ -78,7 +78,7 @@ def _teams(app, n):
 
 
 def test_damage_shown_as_percentage_not_raw_count(qtbot, make_app):
-    app = make_app("cod")                         # full_at 10, Teams weight 1.5
+    app = make_app("cod")                         # max_messages 10, Teams weight 1.5
     p = PanelWindow(app)
     qtbot.addWidget(p)
     _teams(app, 2)                                # total weight 3.0 -> 3/10 = 30%
@@ -91,7 +91,7 @@ def test_damage_percent_uses_per_overlay_max_messages(qtbot, make_app):
     p = PanelWindow(app)
     qtbot.addWidget(p)
     _teams(app, 2)                                # weight 3.0
-    # the denominator is THIS overlay's max_messages, not the global full_at
+    # the denominator is THIS overlay's max_messages, not the global max_messages
     app.rules.hud_params = {"cod": {"max_messages": 30}}
     p.refresh()
     assert "10%" in p.status.text()               # 3 / 30
@@ -145,7 +145,7 @@ def test_damage_percent_clamps_at_100(qtbot, make_app):
     app = make_app("cod")
     p = PanelWindow(app)
     qtbot.addWidget(p)
-    _teams(app, 20)                               # weight 30 >> full_at 10
+    _teams(app, 20)                               # weight 30 >> max_messages 10
     assert p.damage_percent() == 100.0
     assert "100%" in p.status.text()
 

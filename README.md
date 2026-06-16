@@ -196,21 +196,21 @@ a per-OS probe); the *value* is platform-specific — on **X11** it's the window
 **Windows** the process exe (e.g. `chrome.exe`). Use an alternation
 (`crx_…|chrome.exe`) for a cross-OS file.
 
-### Tuning the HUDs (`full_at`, `[hud.*]`)
+### Tuning the HUDs (`max_messages`, `[hud.*]`)
 
 The same `rules.toml` carries the HUD knobs; edits apply **live while the HUD is
 on screen**. Per-rule `weight` is the damage; on top of that, **every `[hud.*]`
 block accepts these optional universal knobs**:
 
 ```toml
-max_messages = 0     # this HUD's damage capacity; 0 = inherit the global full_at
+max_messages = 0     # this HUD's damage capacity; 0 = inherit the global max_messages
 weight_scale = 1.0   # drain-rate multiplier on notification weights (2.0 = 2x as fast)
 width  = 0           # default widget box width  px (0 = the HUD's built-in size)
 height = 0           # default widget box height px (0 = built-in)   — ⊕ resets to this
 ```
 
 ```toml
-full_at   = 10.0    # global damage / unread-message budget (HUDs inherit unless they set max_messages)
+max_messages   = 10.0    # global damage / unread-message budget (HUDs inherit unless they set max_messages)
 max_alpha = 0.7     # opacity ceiling
 
 [hud.halo]          # shield + health bars
@@ -224,7 +224,7 @@ clear_at_rest    = 0.85    # inner clear radius at 0 damage (1.0 = red only at e
 max_encroachment = 0.18    # inner clear radius at full damage (smaller = red creeps further in)
 intensity        = 0.5     # peripheral-red opacity slope (x damage x max_alpha)
 
-[hud.mario]         # mushroom lives (one mushroom per unit of full_at)
+[hud.mario]         # mushroom lives (one mushroom per unit of max_messages)
 # icon_path   = "/path/to/icon.png"   # default: bundled mushroom (transparent bg)
 lost_opacity = 0.18    # opacity of a lost mushroom (0 = hide it entirely)
 gap          = 0.12    # spacing between mushrooms (fraction of icon width)

@@ -11,7 +11,7 @@ bar, under a compass strip.
 The shield depletes *entirely* before the health bar begins to drop, mirroring
 Halo's "shield first, then health" model.
 
-Capacity N = round(full_at) units, split by `shield_fraction` (default 0.5).
+Capacity N = round(max_messages) units, split by `shield_fraction` (default 0.5).
 The split rounds *toward the shield* (half-up) so it stays an integer even for
 odd N: shield = round_half_up(N * shield_fraction), health = N - shield
 (e.g. N=11, f=0.5 -> 6 shield / 5 health; N=13 -> 7 / 6; N=10 -> 5 / 5).

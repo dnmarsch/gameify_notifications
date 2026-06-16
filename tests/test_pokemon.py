@@ -40,10 +40,10 @@ def test_pokemon_is_registered(qapp):
 
 # ---- HP model + color thresholds ------------------------------------------
 def test_hp_is_remaining_health(poke, make_ctx):
-    assert poke.hp(make_ctx(total_weight=0.0, full_at=10.0)) == 1.0
-    assert poke.hp(make_ctx(total_weight=5.0, full_at=10.0)) == 0.5
-    assert poke.hp(make_ctx(total_weight=10.0, full_at=10.0)) == 0.0
-    assert poke.hp(make_ctx(total_weight=15.0, full_at=10.0)) == 0.0   # clamp
+    assert poke.hp(make_ctx(total_weight=0.0, max_messages=10.0)) == 1.0
+    assert poke.hp(make_ctx(total_weight=5.0, max_messages=10.0)) == 0.5
+    assert poke.hp(make_ctx(total_weight=10.0, max_messages=10.0)) == 0.0
+    assert poke.hp(make_ctx(total_weight=15.0, max_messages=10.0)) == 0.0   # clamp
 
 
 def test_hp_color_thresholds(poke):
@@ -64,11 +64,11 @@ def test_hp_color_thresholds_are_configurable(poke, make_ctx):
 
 def test_hp_honors_max_messages_and_weight_scale(poke, make_ctx):
     # capacity override: 15 damage out of a 30 max -> 50% HP (not fainted)
-    assert poke.hp(make_ctx(total_weight=15.0, full_at=10.0, params={"max_messages": 30})) == 0.5
-    # drain multiplier: 5 weight x2 = 10 -> 0 HP against full_at 10
-    assert poke.hp(make_ctx(total_weight=5.0, full_at=10.0, params={"weight_scale": 2.0})) == 0.0
-    # absent -> defaults (inherit full_at, unscaled)
-    assert poke.hp(make_ctx(total_weight=5.0, full_at=10.0)) == 0.5
+    assert poke.hp(make_ctx(total_weight=15.0, max_messages=10.0, params={"max_messages": 30})) == 0.5
+    # drain multiplier: 5 weight x2 = 10 -> 0 HP against max_messages 10
+    assert poke.hp(make_ctx(total_weight=5.0, max_messages=10.0, params={"weight_scale": 2.0})) == 0.0
+    # absent -> defaults (inherit max_messages, unscaled)
+    assert poke.hp(make_ctx(total_weight=5.0, max_messages=10.0)) == 0.5
 
 
 # ---- param validation ------------------------------------------------------
@@ -83,18 +83,18 @@ def test_param_validation(poke, make_ctx):
 # ---- rendering: the bar color tracks HP -----------------------------------
 def test_bar_is_green_at_full_red_when_low(poke, make_ctx):
     w, h = 560, 150
-    full = render_to_image(poke, w, h, make_ctx(total_weight=0.0, full_at=10.0, w=w, h=h))
+    full = render_to_image(poke, w, h, make_ctx(total_weight=0.0, max_messages=10.0, w=w, h=h))
     g, _yel, r = _band_colors(full)
     assert g > 0 and r == 0                       # full HP -> green, no red
 
-    low = render_to_image(poke, w, h, make_ctx(total_weight=9.0, full_at=10.0, w=w, h=h))
+    low = render_to_image(poke, w, h, make_ctx(total_weight=9.0, max_messages=10.0, w=w, h=h))
     g2, _y2, r2 = _band_colors(low)
     assert r2 > 0 and g2 == 0                      # 10% HP -> red, no green
 
 
 def test_bar_is_yellow_at_mid(poke, make_ctx):
     w, h = 560, 150
-    mid = render_to_image(poke, w, h, make_ctx(total_weight=5.0, full_at=10.0, w=w, h=h))
+    mid = render_to_image(poke, w, h, make_ctx(total_weight=5.0, max_messages=10.0, w=w, h=h))
     g, yel, r = _band_colors(mid)
     assert yel > 0 and yel >= g and yel >= r       # 50% HP -> yellow dominates
 
@@ -104,7 +104,7 @@ def test_missing_sprite_falls_back_to_bundled(poke, make_ctx):
     # one. The box is cream, so assert the sprite region has non-cream ink pixels.
     w, h = 560, 150
     img = render_to_image(poke, w, h,
-                          make_ctx(total_weight=0.0, full_at=10.0, w=w, h=h,
+                          make_ctx(total_weight=0.0, max_messages=10.0, w=w, h=h,
                                    params={"icon_path": "/no/such.png"}))
     cream = (248, 248, 224)
     ink = 0
