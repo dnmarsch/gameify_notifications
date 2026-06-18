@@ -3,6 +3,7 @@ config dir)."""
 
 import pytest
 
+from gameify_notifications import config
 from gameify_notifications.rules import RuleSet
 
 
@@ -11,12 +12,25 @@ def rules():
     return RuleSet()
 
 
+def test_omitted_weight_defaults_to_half():
+    config.rules_file().write_text('[[rule]]\nname = "X"\nmatch = "x"\n')
+    rs = RuleSet()
+    assert config.DEFAULT_RULE_WEIGHT == 0.5
+    assert rs.rules[0].weight == 0.5            # absent weight -> the default
+
+
+def test_rule_index_tracks_toml_position():
+    config.rules_file().write_text('[[rule]]\nname = "A"\n\n[[rule]]\nname = "B"\n')
+    rs = RuleSet()
+    assert [r.index for r in rs.rules] == [0, 1]
+
+
 @pytest.mark.parametrize("app,summary,body,expected", [
     # Chrome delivers Teams/Outlook with the site origin in the body
     ("Google Chrome", "Collin Kessinger", "teams.cloud.microsoft", ("Teams message", 1.5)),
     ("Google Chrome", "Collin Kessinger", "teams.microsoft.com", ("Teams message", 1.5)),
-    ("Google Chrome", "Derek Marsch", "outlook.cloud.microsoft", ("Outlook email", 0.5)),
-    ("Google Chrome", "Inbox", "outlook.office.com", ("Outlook email", 0.5)),
+    ("Google Chrome", "Derek Marsch", "outlook.cloud.microsoft", ("Outlook email", 1.0)),
+    ("Google Chrome", "Inbox", "outlook.office.com", ("Outlook email", 1.0)),
     ("Slack", "general", "hello there", None),               # no rule -> ignored
     ("Google Chrome", "Some site", "example.com", None),     # other web notif -> ignored
 ])

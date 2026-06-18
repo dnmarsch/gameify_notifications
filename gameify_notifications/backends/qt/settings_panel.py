@@ -173,6 +173,7 @@ class SettingsPanel(QWidget):
                 if p.name in ("width", "height") and not widget_scope:
                     continue                              # box size is meaningless for cod
                 self._add_control(p, ["hud", hud.name, p.name], self._hud_current(p))
+            self._add_rules_section()                 # global per-notification weights
         finally:
             self._building = False
         self._fit()                              # best-effort now...
@@ -310,6 +311,93 @@ class SettingsPanel(QWidget):
         if keys[-1] in ("width", "height"):
             self.on_resize()                   # live-resize the widget HUD box
         self.on_change()
+
+    # ---- global damage-source weights (rules.toml [[rule]]) --------------
+    def _add_rules_section(self):
+        """A 'Damage sources' section: one weight slider per rule (its matcher
+        shown read-only), then a reset-to-default button. Built with the same
+        row/slider helpers as the param controls."""
+        self._add_header("Damage sources")
+        for rule in self.app.rules.rules:
+            self._add_rule_weight(rule)
+        self._add_rules_reset()
+
+    def _matcher_text(self, rule):
+        """Read-only description of what a rule matches (edited only in rules.toml)."""
+        parts = []
+        if rule.app_regex is not None:
+            parts.append(f"app matches  /{rule.app_regex.pattern}/")
+        if rule.text_regex is not None:
+            parts.append(f"text matches /{rule.text_regex.pattern}/")
+        if rule.focus_regex is not None:
+            parts.append(f"muted while focused: /{rule.focus_regex.pattern}/")
+        if not parts:
+            parts.append("matches every notification")
+        return "Matcher (read-only -- edit in rules.toml):\n" + "\n".join(parts)
+
+    def _add_rule_weight(self, rule):
+        idx = rule.index
+        row = QWidget()
+        h = QHBoxLayout(row)
+        h.setContentsMargins(0, 0, 0, 0)
+        lbl = QLabel(rule.name)
+        lbl.setMinimumWidth(112)
+        h.addWidget(lbl)
+        info = QLabel("ⓘ")                            # hover -> read-only matcher
+        info.setObjectName(f"settings.rule.info.{idx}")
+        info.setToolTip(self._matcher_text(rule))
+        info.setStyleSheet(
+            "color:#101010; background:#cdd9e3; border:1px solid #9aa7b3;"
+            " border-radius:7px; padding:0px 4px;")
+        h.addWidget(info)
+
+        lo, hi, step = 0.0, 5.0, 0.5                  # 0 = listed, no redness (re-armable)
+        ticks = int(round((hi - lo) / step))
+        slider = QSlider(Qt.Horizontal)
+        slider.setObjectName(f"settings.rule.weight.{idx}")
+        slider.setRange(0, ticks)
+        slider.setValue(min(ticks, max(0, round(rule.weight / step))))
+        vlabel = QLabel(_fmt(round(slider.value() * step, 2)))
+        vlabel.setMinimumWidth(46)
+        vlabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        def changed(t):
+            val = round(t * step, 2)
+            vlabel.setText(_fmt(val))
+            self._commit_rule_weight(idx, val)
+
+        slider.valueChanged.connect(changed)
+        h.addWidget(slider, 1)
+        h.addWidget(vlabel)
+        self._form.insertWidget(self._form.count() - 1, row)
+
+    def _commit_rule_weight(self, index, value):
+        if self._building or index is None:
+            return
+        config.set_rule_weight(index, value)
+        self.app.rules.reload(force=True)
+        self.on_change()
+
+    def _add_rules_reset(self):
+        row = QWidget()
+        h = QHBoxLayout(row)
+        h.setContentsMargins(0, 6, 0, 2)
+        self.rules_reset_btn = QPushButton("Reset damage source weights")
+        self.rules_reset_btn.setObjectName("settings.rules.reset")
+        self.rules_reset_btn.setToolTip(
+            "Reset every damage source's weight to the default "
+            f"({config.DEFAULT_RULE_WEIGHT:g})")
+        self.rules_reset_btn.clicked.connect(self._on_reset_rules)
+        h.addStretch(1)
+        h.addWidget(self.rules_reset_btn)
+        h.addStretch(1)
+        self._form.insertWidget(self._form.count() - 1, row)
+
+    def _on_reset_rules(self):
+        config.reset_rule_weights()
+        self.app.rules.reload(force=True)
+        self.on_change()
+        self.build()                                  # sliders now show the default weight
 
     def _on_hud_selected(self, _index):
         name = self.hud_combo.currentData()       # internal name, not the display text

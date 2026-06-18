@@ -32,6 +32,7 @@ class Rule:
     def __init__(self, name, weight, pattern=None, app=None, focus_class=None):
         self.name = name
         self.weight = float(weight)
+        self.index = None        # position in rules.toml's [[rule]] array (set on load)
         self.text_regex = re.compile(pattern, re.IGNORECASE) if pattern else None
         self.app_regex = re.compile(app, re.IGNORECASE) if app else None
         # if the active window's WM_CLASS/app matches this, suppress the damage
@@ -103,8 +104,9 @@ class RuleSet:
             try:
                 if not isinstance(r, dict):
                     raise TypeError("rule entry is not a table")
-                rule = Rule(r["name"], r.get("weight", 0.0),
+                rule = Rule(r["name"], r.get("weight", config.DEFAULT_RULE_WEIGHT),
                             r.get("match"), r.get("app"), r.get("focus_class"))
+                rule.index = i - 1          # position in the [[rule]] array (for writeback)
             except Exception as exc:
                 log.warning("skipping invalid rule #%d (%r): %s", i, r, exc)
                 continue

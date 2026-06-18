@@ -62,7 +62,7 @@ is additionally covered directly in `test_geometry.py`.
 | Dismiss panel | new notification appears live | `test_panel_window::test_new_notification_appears_live` |
 | Damage state | accumulate / dismiss / clear / observers | `test_state.py` |
 | Rules | app-aware classify (app+text), first-match, app-scoping, unmatched→`None` | `test_rules.py` |
-| App | notify → classify → state; Outlook mild (0.5); unmatched app ignored | `test_app.py` |
+| App | notify → classify → state; Outlook email (1.0); unmatched app ignored | `test_app.py` |
 | Geometry | clamp / fractions / max-frac / off-screen | `test_geometry.py` |
 | Sources | parsers, composite fan-in, registry/selection, plugins, capture prefilter (empty=forward all) | `test_sources.py` |
 | Factories | `select_backend`, `make_hud_window` scope routing | `test_factories.py` |

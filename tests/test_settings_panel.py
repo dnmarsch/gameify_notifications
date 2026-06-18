@@ -226,6 +226,30 @@ def test_all_settings_params_have_help(qtbot, make_app):
             assert p.help, f"{hud.name}.{p.name} missing help"
 
 
+def test_damage_source_weight_slider_writes_back(qtbot, make_app):
+    # the shipped default rules give Teams (idx 0) + Outlook (idx 1)
+    _app, s = _settings(qtbot, make_app, "halo")
+    sl = s.findChild(QSlider, "settings.rule.weight.0")
+    assert sl is not None
+    sl.setValue(sl.maximum())                        # 0..10 ticks over 0..5 weight
+    assert _toml()["rule"][0]["weight"] == 5.0
+
+
+def test_damage_source_matcher_is_read_only_tooltip(qtbot, make_app):
+    from PySide6.QtWidgets import QLabel
+    _app, s = _settings(qtbot, make_app, "halo")
+    info = s.findChild(QLabel, "settings.rule.info.0")
+    assert info is not None and "read-only" in info.toolTip().lower()
+
+
+def test_reset_damage_source_weights_button(qtbot, make_app):
+    _app, s = _settings(qtbot, make_app, "halo")
+    s.findChild(QSlider, "settings.rule.weight.0").setValue(0)   # mute Teams (idx 0)
+    assert _toml()["rule"][0]["weight"] == 0.0
+    s.rules_reset_btn.click()
+    assert _toml()["rule"][0]["weight"] == 1.5        # restored to Teams' shipped default
+
+
 def test_close_button_hides_settings(qtbot, make_app):
     _app, s = _settings(qtbot, make_app, "halo")
     s.show()

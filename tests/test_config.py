@@ -101,6 +101,38 @@ def test_get_config_value_reads_and_defaults():
     assert config.get_config_value(["active_hud", "x"], "d") == "d"  # non-dict descent
 
 
+def test_set_rule_weight_targets_index_keeps_others():
+    config.rules_file().write_text(
+        '[[rule]]\nname = "A"\nweight = 1.0\n\n[[rule]]\nname = "B"\nweight = 2.0\n')
+    config.set_rule_weight(1, 3.5)
+    d = _toml()
+    assert d["rule"][0]["weight"] == 1.0          # untouched
+    assert d["rule"][1]["weight"] == 3.5          # set
+
+
+def test_set_rule_weight_out_of_range_is_noop():
+    config.rules_file().write_text('[[rule]]\nname = "A"\nweight = 1.0\n')
+    config.set_rule_weight(9, 4.0)                 # no such index
+    assert _toml()["rule"][0]["weight"] == 1.0
+
+
+def test_default_rule_weights_from_shipped():
+    w = config.default_rule_weights()
+    assert w["Teams message"] == 1.5 and w["Outlook email"] == 1.0
+
+
+def test_reset_rule_weights_restores_shipped_defaults():
+    config.rules_file().write_text(
+        '[[rule]]\nname = "Teams message"\nweight = 5.0\n\n'
+        '[[rule]]\nname = "Outlook email"\nweight = 5.0\n\n'
+        '[[rule]]\nname = "Custom"\nweight = 5.0\n')
+    config.reset_rule_weights()
+    d = _toml()
+    assert d["rule"][0]["weight"] == 1.5          # Teams -> shipped default
+    assert d["rule"][1]["weight"] == 1.0          # Outlook -> shipped default
+    assert d["rule"][2]["weight"] == 0.5          # no shipped default -> DEFAULT_RULE_WEIGHT
+
+
 def test_reset_hud_drops_table_keeps_rest():
     config.rules_file().write_text(
         "max_messages = 10.0\n\n[hud.halo]\nshield_fraction = 0.2\n\n"

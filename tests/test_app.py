@@ -17,11 +17,11 @@ def test_on_notification_classifies_and_accumulates():
     assert app.state.items[0].category == "Teams message"
 
 
-def test_outlook_email_adds_mild_damage():
+def test_outlook_email_adds_damage():
     app = _app()
     app.on_notification("Google Chrome", "Inbox", "outlook.cloud.microsoft")
     assert len(app.state.items) == 1
-    assert app.state.total_weight() == 0.5
+    assert app.state.total_weight() == 1.0
     assert app.state.items[0].category == "Outlook email"
 
 

@@ -17,6 +17,10 @@ log = logging.getLogger(__name__)
 APP_ID = "gameify_notifications_overlay"
 APP_NAME = "Gameify Notifications"
 
+# Damage weight applied to a matched notification when its rule omits `weight`;
+# also the value the "reset damage source weights" action restores.
+DEFAULT_RULE_WEIGHT = 0.5
+
 # D-Bus interfaces the Linux source watches.
 NOTIFY_IFACE = "org.freedesktop.Notifications"
 PORTAL_IFACE = "org.freedesktop.impl.portal.Notification"
@@ -150,7 +154,7 @@ weight = 1.5
 [[rule]]
 name   = "Outlook email"
 match  = 'outlook\\.(cloud\\.microsoft|office\\.com|office365\\.com)'
-weight = 0.5        # mild -- a few unread emails become noticeable
+weight = 1.0        # an unread email is worth one "message" of damage
 
 # --- Alternatives for other installs (uncomment if you use them) ---
 # snap teams-for-linux reports app name "teams-for-linux" (real message in body):
@@ -292,6 +296,57 @@ def get_config_value(keys, default=None):
             return default
         node = node[k]
     return node
+
+
+def set_rule_weight(index, weight):
+    """Set the damage `weight` of the rule at position `index` in rules.toml's
+    [[rule]] array (the Settings damage-source sliders), preserving comments and
+    formatting. No-op if the file or that index is absent."""
+    import tomlkit
+    path = rules_file()
+    if not path.exists():
+        return
+    doc = tomlkit.parse(path.read_text())
+    rules = doc.get("rule")
+    if rules is None or index < 0 or index >= len(rules):
+        return
+    rules[index]["weight"] = weight
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(tomlkit.dumps(doc))
+    tmp.replace(path)
+
+
+def default_rule_weights():
+    """{rule name -> shipped default weight}, parsed from DEFAULT_RULES. These are
+    the per-source defaults the 'reset' action restores (e.g. Teams 1.5, Outlook 1.0)."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # pragma: no cover
+        return {}
+    data = tomllib.loads(DEFAULT_RULES)
+    return {r["name"]: float(r.get("weight", DEFAULT_RULE_WEIGHT))
+            for r in data.get("rule", [])
+            if isinstance(r, dict) and "name" in r}
+
+
+def reset_rule_weights():
+    """Restore each rule's `weight` to its shipped default (by name; e.g. Teams
+    1.5, Outlook 1.0), or DEFAULT_RULE_WEIGHT for a rule with no shipped default.
+    The damage-source 'reset' button."""
+    import tomlkit
+    path = rules_file()
+    if not path.exists():
+        return
+    doc = tomlkit.parse(path.read_text())
+    rules = doc.get("rule")
+    if rules is None:
+        return
+    defaults = default_rule_weights()
+    for r in rules:
+        r["weight"] = defaults.get(r.get("name"), DEFAULT_RULE_WEIGHT)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(tomlkit.dumps(doc))
+    tmp.replace(path)
 
 
 def reset_hud(name):

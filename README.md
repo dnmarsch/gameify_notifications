@@ -54,20 +54,33 @@ underlying system notification). Pick the HUD that suits you:
 git clone git@github.com:dnmarsch/gameify_notifications.git
 cd gameify_notifications
 
-python -m venv .venv && . .venv/bin/activate
-pip install -e .                         # PySide6 + the app (console cmd: gameify_notifications)
-
-# Linux only — D-Bus capture needs PyGObject from the system package manager:
+# Linux only — D-Bus capture needs PyGObject from the system package manager
+# (it can't be pip-installed cleanly), so install it first:
 sudo apt install python3-gi              # Debian/Ubuntu  (Fedora: sudo dnf install python3-gobject)
+
+# Create the venv WITH --system-site-packages so it can see the system `gi` module:
+python3 -m venv --system-site-packages .venv && . .venv/bin/activate
+pip install -e .                         # PySide6 + the app (console cmd: gameify_notifications)
 ```
 
-> The venv must see the system `gi` module. If you created it without
-> `--system-site-packages`, set `include-system-site-packages = true` in
-> `.venv/pyvenv.cfg` (or recreate with `python -m venv --system-site-packages .venv`).
+> **Why `--system-site-packages`?** PyGObject (the `gi` D-Bus bindings) is a
+> system package, not a pip wheel, so the venv must be allowed to see system
+> packages. A plain `python3 -m venv .venv` is isolated and the app fails at
+> startup with *"PyGObject (gi) is unavailable"*. If you already made the venv
+> without the flag, just recreate it:
+> `rm -rf .venv && python3 -m venv --system-site-packages .venv` (or set
+> `include-system-site-packages = true` in `.venv/pyvenv.cfg`).
+
+> **Moved or renamed the project folder?** A venv hardcodes its own absolute
+> path, so moving/renaming the repo breaks it — the symptom is `python: command
+> not found` *even after* `activate`. Recreate the venv with the command above.
 
 ---
 
 ## Run it
+
+With the venv active (`. .venv/bin/activate`), the `gameify_notifications`
+console command is on your `PATH`:
 
 ```bash
 gameify_notifications                            # capture real notifications (default HUD: cod)
@@ -93,6 +106,39 @@ gameify_notifications --list-huds                # list HUDs
 | `--install-autostart` / `--uninstall-autostart` | — | Manage the login autostart entry (Linux). |
 
 Environment: `GAMEIFY_NOTIFICATIONS_LOG_LEVEL` overrides the level; `GAMEIFY_NOTIFICATIONS_CONFIG_DIR` relocates config/state/logs.
+
+### Launch without activating the venv (Linux)
+
+The installed `gameify_notifications` console script has a shebang pinned to the
+venv's Python, so it runs the app — with PySide6 and `gi` resolved — **without
+any activation**. Pick whichever entry point suits you:
+
+```bash
+# Run the venv's console script directly by full path — no activation needed:
+~/gameify_notifications_overlay/.venv/bin/gameify_notifications
+
+# Or put it on your PATH once, then just type `gameify_notifications` anywhere:
+ln -s ~/gameify_notifications_overlay/.venv/bin/gameify_notifications ~/.local/bin/
+
+# Or add an app-menu launcher you can click (appears in your apps grid):
+cat > ~/.local/share/applications/gameify_notifications.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Gameify Notifications
+Comment=Desktop notifications as a videogame HUD
+Exec=/home/YOU/gameify_notifications_overlay/.venv/bin/gameify_notifications
+Icon=/home/YOU/gameify_notifications_overlay/gameify_notifications/assets/mushroom.png
+Terminal=false
+Categories=Utility;
+EOF
+```
+
+(For the app-menu launcher, replace `/home/YOU/...` with your real absolute path
+— `.desktop` files don't expand `~` or `$HOME`. Append `--hud halo` etc. to the
+`Exec` line to pin a HUD.) The symlink works because `~/.local/bin` is on the
+default `PATH`; these all keep working as long as the `.venv` stays in place.
+On **Windows** / **macOS**, point a Startup shortcut / LaunchAgent at the venv's
+`gameify_notifications` executable instead (see [Start on login](#start-on-login)).
 
 ### Start on login
 
